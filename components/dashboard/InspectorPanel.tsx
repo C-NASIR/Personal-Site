@@ -3,11 +3,11 @@
 import { useState } from "react";
 
 import { formatDate } from "@/lib/format";
-import type { FileRecord } from "@/lib/mockData";
+import type { ContentRecord } from "@/lib/content/types";
 
 type InspectorPanelProps = {
-  file?: FileRecord;
-  onOpen: (file: FileRecord) => void;
+  file?: ContentRecord;
+  onOpen: (file: ContentRecord) => void;
 };
 
 export function InspectorPanel({ file, onOpen }: InspectorPanelProps) {
@@ -65,9 +65,36 @@ export function InspectorPanel({ file, onOpen }: InspectorPanelProps) {
         <div className="space-y-1 rounded border border-green-900/40 bg-black/40 px-3 py-2">
           <dt>Updated</dt>
           <dd className="text-green-100">
-            {formatDate(file.updated, { month: "short", day: "2-digit" })}
+            {formatDate(file.updatedAt, { month: "short", day: "2-digit" })}
           </dd>
         </div>
+        {file.role ? (
+          <div className="space-y-1 rounded border border-green-900/40 bg-black/40 px-3 py-2">
+            <dt>Role</dt>
+            <dd className="text-green-100">{file.role}</dd>
+          </div>
+        ) : null}
+        {file.timeframe ? (
+          <div className="space-y-1 rounded border border-green-900/40 bg-black/40 px-3 py-2">
+            <dt>Timeframe</dt>
+            <dd className="text-green-100">{file.timeframe}</dd>
+          </div>
+        ) : null}
+        {file.stack?.length ? (
+          <div className="space-y-1 rounded border border-green-900/40 bg-black/40 px-3 py-2">
+            <dt>Stack</dt>
+            <dd className="flex flex-wrap gap-2 text-[0.6rem] normal-case tracking-[0.2em] text-green-200">
+              {file.stack.map((item) => (
+                <span
+                  className="rounded border border-green-800/40 px-2 py-1"
+                  key={item}
+                >
+                  {item}
+                </span>
+              ))}
+            </dd>
+          </div>
+        ) : null}
         <div className="space-y-1 rounded border border-green-900/40 bg-black/40 px-3 py-2">
           <dt>Tags</dt>
           <dd className="flex flex-wrap gap-2 text-[0.6rem] normal-case tracking-[0.2em] text-green-200">
@@ -107,6 +134,27 @@ export function InspectorPanel({ file, onOpen }: InspectorPanelProps) {
       </div>
 
       <div className="mt-6 flex flex-col gap-3 text-[0.65rem] uppercase tracking-[0.35em]">
+        {file.links?.length ? (
+          <div className="space-y-2">
+            <p className="text-[0.6rem] uppercase tracking-[0.4em] text-green-500/70">
+              Links
+            </p>
+            <ul className="space-y-2 text-[0.6rem] normal-case tracking-[0.2em] text-green-200">
+              {file.links.map((link) => (
+                <li key={link.href}>
+                  <a
+                    className="text-green-300 underline decoration-green-500/60 underline-offset-4 hover:text-green-50"
+                    href={link.href}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <button
           className="rounded border border-green-500/60 bg-green-500/10 px-3 py-2 text-green-50 transition hover:bg-green-500/20"
           type="button"
@@ -127,4 +175,3 @@ export function InspectorPanel({ file, onOpen }: InspectorPanelProps) {
 }
 
 export default InspectorPanel;
-

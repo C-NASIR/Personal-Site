@@ -21,17 +21,22 @@ type Phase = "boot" | "auth" | "granted";
 
 const DASHBOARD_ROUTE = "/dash";
 
-export function BootExperience() {
+type BootExperienceInnerProps = {
+  prefersReducedMotion: boolean;
+};
+
+function BootExperienceInner({ prefersReducedMotion }: BootExperienceInnerProps) {
   const router = useRouter();
-  const prefersReducedMotion = useReducedMotion();
+  const currentLines = prefersReducedMotion ? REDUCED_LOG_LINES : BOOT_LOG_LINES;
   const [phase, setPhase] = useState<Phase>("boot");
-  const [visibleCount, setVisibleCount] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(() =>
+    prefersReducedMotion ? currentLines.length : 1,
+  );
   const [authStepIndex, setAuthStepIndex] = useState(0);
   const [isGranted, setIsGranted] = useState(false);
   const [sessionId] = useState(() => generateSessionId());
   const cleanupRef = useRef<Array<() => void>>([]);
 
-  const currentLines = prefersReducedMotion ? REDUCED_LOG_LINES : BOOT_LOG_LINES;
   const safeVisibleCount = useMemo(
     () => Math.min(visibleCount, currentLines.length),
     [visibleCount, currentLines.length],
@@ -89,10 +94,6 @@ export function BootExperience() {
 
   useEffect(() => {
     clearTimers();
-    setPhase("boot");
-    setVisibleCount(prefersReducedMotion ? currentLines.length : 1);
-    setAuthStepIndex(0);
-    setIsGranted(false);
 
     if (prefersReducedMotion) {
       const reducedTimeout = window.setTimeout(() => {
@@ -125,7 +126,6 @@ export function BootExperience() {
     return () => clearTimers();
   }, [
     prefersReducedMotion,
-    currentLines.length,
     registerCleanup,
     clearTimers,
     pushToDashboard,
@@ -192,5 +192,12 @@ function generateSessionId() {
   return id;
 }
 
-export default BootExperience;
-
+export default function BootExperience() {
+  const prefersReducedMotion = useReducedMotion();
+  return (
+    <BootExperienceInner
+      key={prefersReducedMotion ? "reduced" : "full"}
+      prefersReducedMotion={prefersReducedMotion}
+    />
+  );
+}

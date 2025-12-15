@@ -1,0 +1,31 @@
+---
+id: CF-2101
+title: Distributed KV Store
+classification: TOP SECRET
+status: ACTIVE
+updatedAt: 2024-11-05T09:00:00.000Z
+owner: Systems Research
+role: Lead Architect
+timeframe: 12 weeks
+stack:
+  - Next.js
+  - Rust
+  - DynamoDB
+  - Temporal
+tags:
+  - Distributed Systems
+  - Observability
+  - Reliability
+links:
+  - label: Architecture Brief
+    href: https://example.com/kv-brief
+  - label: Demo Replay
+    href: https://example.com/kv-demo
+summary: Built a verifiable command KV layer that replicates across data centers with sub-second recovery and human-friendly introspection.
+---
+
+The mission combined an aging command-and-control stack with a modern telemetry stream. We replaced the bespoke cache with a replicated KV mesh backed by Temporal so that every write records the workflow context and is replayable.
+
+Key constraints included zero data loss, deterministic conflict resolution, and the ability to replay a failing workflow mid-flight without pausing other clients. I designed the state machine language, wrote the Rust sidecars that guard every write, and exported a typed SDK for product teams.
+
+We layered observability by rendering the workflow graph as MDX-driven diagrams so command could literally trace a command hop-by-hop. Recovery drills now take minutes, not hours.

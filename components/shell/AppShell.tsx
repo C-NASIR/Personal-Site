@@ -1,18 +1,24 @@
 import type { ReactNode } from "react";
 
-import { directoryMap, directoryRoute } from "@/lib/mockData";
+import {
+  directoryMap,
+  directoryRoute,
+  type DirectoryId,
+} from "@/lib/directories";
 
 import { Sidebar } from "./Sidebar";
 import { TopBar, type BreadcrumbItem } from "./TopBar";
 
 type AppShellProps = {
-  activeDirectory?: keyof typeof directoryMap;
+  activeDirectory?: DirectoryId;
+  directoryCounts: Record<DirectoryId, number>;
   children: ReactNode;
   breadcrumbs?: BreadcrumbItem[];
 };
 
 export function AppShell({
   activeDirectory,
+  directoryCounts,
   breadcrumbs,
   children,
 }: AppShellProps) {
@@ -41,7 +47,7 @@ export function AppShell({
       <div className="relative z-10 flex min-h-screen flex-col">
         <TopBar breadcrumbs={defaultBreadcrumbs} />
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar activeDirectory={activeDirectory} />
+          <Sidebar activeDirectory={activeDirectory} counts={directoryCounts} />
           <main className="flex-1 overflow-hidden border-l border-green-900/30 bg-black/40">
             {children}
           </main>
@@ -52,4 +58,3 @@ export function AppShell({
 }
 
 export default AppShell;
-

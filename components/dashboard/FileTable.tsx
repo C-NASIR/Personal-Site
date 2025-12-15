@@ -4,19 +4,19 @@ import clsx from "clsx";
 import { useCallback, type KeyboardEvent } from "react";
 
 import { clamp } from "@/lib/format";
-import type { FileRecord } from "@/lib/mockData";
+import type { ContentRecord } from "@/lib/content/types";
 
 export type SortKey = "title" | "classification" | "status" | "updated";
 export type SortDirection = "asc" | "desc";
 
 type FileTableProps = {
-  files: FileRecord[];
+  files: ContentRecord[];
   sortKey: SortKey;
   sortDirection: SortDirection;
   selectedIndex: number | null;
   onSelect: (index: number | null) => void;
   onSortChange: (key: SortKey) => void;
-  onOpen: (file: FileRecord) => void;
+  onOpen: (file: ContentRecord) => void;
 };
 
 export function FileTable({
@@ -141,7 +141,7 @@ export function FileTable({
                   </Chip>
                 </div>
                 <div className="text-xs tracking-[0.2em] text-green-300/80">
-                  {new Date(file.updated).toLocaleDateString(undefined, {
+                  {new Date(file.updatedAt).toLocaleDateString(undefined, {
                     month: "short",
                     day: "2-digit",
                   })}

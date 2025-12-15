@@ -4,18 +4,18 @@ import clsx from "clsx";
 import Link from "next/link";
 
 import {
-  directoryCounts,
   directoryMap,
   directoryRoute,
   directories,
   type DirectoryId,
-} from "@/lib/mockData";
+} from "@/lib/directories";
 
 type SidebarProps = {
   activeDirectory?: DirectoryId;
+  counts: Record<DirectoryId, number>;
 };
 
-export function Sidebar({ activeDirectory }: SidebarProps) {
+export function Sidebar({ activeDirectory, counts }: SidebarProps) {
   const currentDirectory = activeDirectory ?? "case";
 
   return (
@@ -42,8 +42,8 @@ export function Sidebar({ activeDirectory }: SidebarProps) {
                   {directory.label}
                 </span>
                 <span className="text-[0.65rem] uppercase tracking-[0.3em] text-green-300/70">
-                  {directoryCounts[directory.id]}{" "}
-                  {directoryCounts[directory.id] === 1 ? "Entry" : "Entries"}
+                  {counts[directory.id] ?? 0}{" "}
+                  {(counts[directory.id] ?? 0) === 1 ? "Entry" : "Entries"}
                 </span>
                 <span className="text-[0.65rem] leading-relaxed text-green-200/70">
                   {directory.description}
@@ -61,4 +61,3 @@ export function Sidebar({ activeDirectory }: SidebarProps) {
 }
 
 export default Sidebar;
-

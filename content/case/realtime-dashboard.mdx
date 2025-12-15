@@ -1,0 +1,29 @@
+---
+id: CF-2088
+title: Realtime Intelligence Dashboard
+classification: SECRET
+status: ACTIVE
+updatedAt: 2024-09-14T15:30:00.000Z
+owner: Atlas Sensors
+role: Product Engineering Lead
+timeframe: 10 weeks
+stack:
+  - Next.js
+  - WebGL
+  - Kafka
+  - Redis
+tags:
+  - Visualization
+  - Streaming
+  - Edge
+links:
+  - label: Ops Walkthrough
+    href: https://example.com/realtime-walkthrough
+summary: Unified six telemetry surfaces into a single dashboard that streams 11k events per second with deterministic playback controls.
+---
+
+Legacy consoles forced analysts to tab through separate programs during an incident which meant nobody had the full picture. I partnered with sensor engineers to normalize payloads and designed a typed event bus that feeds the dashboard via Server-Sent Events.
+
+We project the fused signal into a WebGL scene. Each subsystem owns its own shader + legend so we can add new feeds without a rewrite. When bandwidth drops the renderer gracefully degrades into vector shapes, keeping 60 FPS on ruggedized tablets.
+
+Analysts also needed to rewind incidents in slow motion. We carved out a Redis-backed history buffer that stores ten minutes of high-resolution state and replays it in sync with audio transcripts.

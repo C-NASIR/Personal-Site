@@ -3,56 +3,43 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import {
-  directoryMap,
-  filesByDirectory,
-  type DirectoryId,
-  type FileRecord,
-} from "@/lib/mockData";
+import { directoryMap, type DirectoryId } from "@/lib/directories";
+import type { ContentRecord } from "@/lib/content/types";
 
 import { FileTable, type SortDirection, type SortKey } from "./FileTable";
 import { InspectorPanel } from "./InspectorPanel";
 
 type DashboardScreenProps = {
   directory: DirectoryId;
+  records: ContentRecord[];
 };
 
 const DEFAULT_SORT_KEY: SortKey = "updated";
 const DEFAULT_SORT_DIRECTION: SortDirection = "desc";
 
-export function DashboardScreen({ directory }: DashboardScreenProps) {
+export function DashboardScreen({ directory, records }: DashboardScreenProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
   const [sortDirection, setSortDirection] =
     useState<SortDirection>(DEFAULT_SORT_DIRECTION);
-  const [selectionByDirectory, setSelectionByDirectory] = useState<
-    Record<DirectoryId, string | null>
-  >(() => {
-    const initial: Record<DirectoryId, string | null> = {
-      case: filesByDirectory.case[0]?.id ?? null,
-      intel: filesByDirectory.intel[0]?.id ?? null,
-      logs: filesByDirectory.logs[0]?.id ?? null,
-      credentials: filesByDirectory.credentials[0]?.id ?? null,
-    };
-    return initial;
-  });
-
-  const activeDirectory = directory;
-  const directoryFiles = filesByDirectory[activeDirectory];
+  const [selectedId, setSelectedId] = useState<string | null>(
+    () => records[0]?.id ?? null,
+  );
 
   const filteredFiles = useMemo(() => {
     if (!query.trim()) {
-      return directoryFiles;
+      return records;
     }
     const needle = query.toLowerCase();
-    return directoryFiles.filter(
+    return records.filter(
       (file) =>
+        file.id.toLowerCase().includes(needle) ||
         file.title.toLowerCase().includes(needle) ||
         file.summary.toLowerCase().includes(needle) ||
         file.tags.some((tag) => tag.toLowerCase().includes(needle)),
     );
-  }, [directoryFiles, query]);
+  }, [records, query]);
 
   const sortedFiles = useMemo(() => {
     const next = [...filteredFiles];
@@ -74,7 +61,7 @@ export function DashboardScreen({ directory }: DashboardScreenProps) {
         case "updated":
         default:
           comparison =
-            new Date(a.updated).getTime() - new Date(b.updated).getTime();
+            new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
           break;
       }
 
@@ -84,14 +71,13 @@ export function DashboardScreen({ directory }: DashboardScreenProps) {
     return next;
   }, [filteredFiles, sortDirection, sortKey]);
 
-  const selectedFileId = selectionByDirectory[activeDirectory];
-  const selectedIndex = selectedFileId
-    ? sortedFiles.findIndex((file) => file.id === selectedFileId)
+  const selectedFileFromState = selectedId
+    ? sortedFiles.find((file) => file.id === selectedId)
+    : undefined;
+  const selectedFile = selectedFileFromState ?? sortedFiles[0];
+  const safeSelectedIndex = selectedFile
+    ? sortedFiles.findIndex((file) => file.id === selectedFile.id)
     : null;
-  const safeSelectedIndex =
-    selectedIndex !== null && selectedIndex >= 0 ? selectedIndex : null;
-  const selectedFile =
-    safeSelectedIndex !== null ? sortedFiles[safeSelectedIndex] : undefined;
 
   const handleSortChange = useCallback(
     (key: SortKey) => {
@@ -107,13 +93,13 @@ export function DashboardScreen({ directory }: DashboardScreenProps) {
   );
 
   const handleOpen = useCallback(
-    (file: FileRecord) => {
+    (file: ContentRecord) => {
       router.push(`/files/${file.directory}/${file.slug}`);
     },
     [router],
   );
 
-  const info = directoryMap[activeDirectory];
+  const info = directoryMap[directory];
 
   return (
     <section className="flex h-full flex-col gap-6 p-6">
@@ -158,11 +144,9 @@ export function DashboardScreen({ directory }: DashboardScreenProps) {
           sortDirection={sortDirection}
           selectedIndex={safeSelectedIndex}
           onSelect={(index) =>
-            setSelectionByDirectory((previous) => ({
-              ...previous,
-              [activeDirectory]:
-                index === null ? null : sortedFiles[index]?.id ?? null,
-            }))
+            setSelectedId(
+              index === null ? null : sortedFiles[index]?.id ?? null,
+            )
           }
           onSortChange={handleSortChange}
           onOpen={handleOpen}

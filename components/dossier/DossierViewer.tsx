@@ -1,21 +1,17 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { MDXRemote } from "next-mdx-remote/rsc";
 
+import type { ContentRecord } from "@/lib/content/types";
 import { formatDate } from "@/lib/format";
-import {
-  directoryRoute,
-  type DirectoryMeta,
-  type FileRecord,
-} from "@/lib/mockData";
+import { directoryRoute, type DirectoryMeta } from "@/lib/directories";
 
 type DossierViewerProps = {
-  file: FileRecord;
+  file: ContentRecord;
   directory: DirectoryMeta;
 };
 
 export function DossierViewer({ file, directory }: DossierViewerProps) {
-  const paragraphs = file.body.split("\n\n");
-
   return (
     <section className="flex h-full flex-col gap-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-green-900/40 pb-4">
@@ -43,12 +39,30 @@ export function DossierViewer({ file, directory }: DossierViewerProps) {
         <Metadata label="Owner">{file.owner}</Metadata>
         <Metadata label="Status">{file.status}</Metadata>
         <Metadata label="Updated">
-          {formatDate(file.updated, {
+          {formatDate(file.updatedAt, {
             month: "short",
             day: "2-digit",
             year: "numeric",
           })}
         </Metadata>
+        {file.role ? <Metadata label="Role">{file.role}</Metadata> : null}
+        {file.timeframe ? (
+          <Metadata label="Timeframe">{file.timeframe}</Metadata>
+        ) : null}
+        {file.stack?.length ? (
+          <Metadata label="Stack">
+            <span className="flex flex-wrap gap-2 text-[0.6rem] normal-case tracking-[0.2em] text-green-200">
+              {file.stack.map((tag) => (
+                <span
+                  className="rounded border border-green-800/40 px-2 py-1"
+                  key={tag}
+                >
+                  {tag}
+                </span>
+              ))}
+            </span>
+          </Metadata>
+        ) : null}
         <Metadata label="Tags">
           <span className="flex flex-wrap gap-2 text-[0.6rem] normal-case tracking-[0.2em] text-green-200">
             {file.tags.map((tag) => (
@@ -61,12 +75,28 @@ export function DossierViewer({ file, directory }: DossierViewerProps) {
             ))}
           </span>
         </Metadata>
+        {file.links?.length ? (
+          <Metadata label="Links">
+            <ul className="space-y-1 text-[0.6rem] normal-case tracking-[0.2em] text-green-200">
+              {file.links.map((link) => (
+                <li key={link.href}>
+                  <a
+                    className="text-green-300 underline decoration-green-500/60 underline-offset-4 hover:text-green-50"
+                    href={link.href}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </Metadata>
+        ) : null}
       </div>
 
-      <article className="flex-1 space-y-4 overflow-auto rounded border border-green-900/40 bg-black/60 p-6 text-sm leading-relaxed text-green-100/90">
-        {paragraphs.map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
+      <article className="flex-1 overflow-auto rounded border border-green-900/40 bg-black/60 p-6 text-sm leading-relaxed text-green-100/90">
+        <MDXRemote source={file.body} components={mdxComponents} />
       </article>
     </section>
   );
@@ -87,5 +117,35 @@ function Metadata({ label, children }: MetadataProps) {
     </div>
   );
 }
+
+const mdxComponents = {
+  h2: (props: ComponentProps<"h2">) => (
+    <h2
+      className="mt-8 text-2xl font-semibold text-green-50"
+      {...props}
+    />
+  ),
+  h3: (props: ComponentProps<"h3">) => (
+    <h3
+      className="mt-6 text-xl font-semibold text-green-100"
+      {...props}
+    />
+  ),
+  p: (props: ComponentProps<"p">) => (
+    <p className="mb-4 leading-relaxed text-green-100/90" {...props} />
+  ),
+  ul: (props: ComponentProps<"ul">) => (
+    <ul className="mb-4 list-disc pl-6 text-green-100/90" {...props} />
+  ),
+  li: (props: ComponentProps<"li">) => (
+    <li className="mb-2" {...props} />
+  ),
+  a: (props: ComponentProps<"a">) => (
+    <a
+      className="text-green-300 underline decoration-green-500/60 underline-offset-4 hover:text-green-50"
+      {...props}
+    />
+  ),
+};
 
 export default DossierViewer;

@@ -1,0 +1,20 @@
+---
+id: IR-3010
+title: Notes on Service Mesh Hardening
+classification: CONFIDENTIAL
+status: ACTIVE
+publishedAt: 2024-09-20T10:00:00.000Z
+tags:
+  - Networking
+  - Security
+  - SRE
+summary: Field-tested playbook for keeping multi-tenant service meshes trustworthy when the certificate authority lives on the wrong side of a slow link.
+---
+
+I embedded with two platform teams rolling out a mesh on air-gapped gear. The control plane loved to panic whenever a CA rotated mid-mission. This report documents the guard rails we implemented: split brain detection, workload identity linting, and deterministic retries that never amplify outages.
+
+Key callouts:
+
+- Re-signed workloads no longer require draining an entire node pool.
+- Traffic assertions run inline so you can diff policy drift before rollout.
+- Observability hooks publish every mTLS failure with enough context to replay the negotiation offline.
