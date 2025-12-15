@@ -13,7 +13,7 @@ type TopBarProps = {
 };
 
 export function TopBar({ breadcrumbs }: TopBarProps) {
-  const [clock, setClock] = useState(() => new Date());
+  const [clock, setClock] = useState<Date | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const quickNav = [
     { label: "About", href: "/about" },
@@ -82,11 +82,13 @@ export function TopBar({ breadcrumbs }: TopBarProps) {
           </button>
           <Status label="Clearance">Level VII</Status>
           <Status label="Clock">
-            {clock.toLocaleTimeString(undefined, {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })}
+            {clock
+              ? clock.toLocaleTimeString(undefined, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })
+              : "SYNCING"}
           </Status>
           <Status label="Session">{sessionId ?? "INITIALIZING"}</Status>
           <Status label="Systems">

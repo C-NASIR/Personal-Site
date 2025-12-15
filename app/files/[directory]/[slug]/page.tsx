@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DossierViewer } from "@/components/dossier/DossierViewer";
@@ -16,6 +17,7 @@ import {
   type DirectoryId,
 } from "@/lib/directories";
 import { buildSearchIndex } from "@/lib/search/index";
+import { buildPageMetadata } from "@/components/seo/metadata";
 
 interface FileDetailPageProps {
   params: { directory: string; slug: string };
@@ -33,6 +35,37 @@ export async function generateStaticParams() {
   );
 
   return params.flat();
+}
+
+export async function generateMetadata({
+  params,
+}: FileDetailPageProps): Promise<Metadata> {
+  const { directory, slug } = params;
+  if (!isDirectoryId(directory)) {
+    return buildPageMetadata({
+      title: "Dossier",
+      description: "Classified dossier",
+      path: `/files/${directory}/${slug}`,
+    });
+  }
+
+  const record = await getRecordBySlug(directory, slug);
+  if (!record) {
+    return buildPageMetadata({
+      title: "Dossier",
+      description: "Classified dossier",
+      path: `/files/${directory}/${slug}`,
+    });
+  }
+
+  const isDraft = record.status === "DRAFT";
+
+  return buildPageMetadata({
+    title: record.title,
+    description: record.summary,
+    path: `/files/${directory}/${slug}`,
+    noindex: isDraft,
+  });
 }
 
 export default async function FileDetailPage({ params }: FileDetailPageProps) {
