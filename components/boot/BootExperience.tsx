@@ -34,7 +34,7 @@ function BootExperienceInner({ prefersReducedMotion }: BootExperienceInnerProps)
   );
   const [authStepIndex, setAuthStepIndex] = useState(0);
   const [isGranted, setIsGranted] = useState(false);
-  const [sessionId] = useState(() => generateSessionId());
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const cleanupRef = useRef<Array<() => void>>([]);
 
   const safeVisibleCount = useMemo(
@@ -93,8 +93,11 @@ function BootExperienceInner({ prefersReducedMotion }: BootExperienceInnerProps)
   }, [pushToDashboard, registerCleanup]);
 
   useEffect(() => {
-    clearTimers();
+    const idTimeout = window.setTimeout(() => {
+      setSessionId(generateSessionId());
+    }, 0);
 
+    clearTimers();
     if (prefersReducedMotion) {
       const reducedTimeout = window.setTimeout(() => {
         pushToDashboard();
@@ -123,7 +126,10 @@ function BootExperienceInner({ prefersReducedMotion }: BootExperienceInnerProps)
 
     registerCleanup(() => window.clearInterval(bootInterval));
 
-    return () => clearTimers();
+    return () => {
+      clearTimers();
+      window.clearTimeout(idTimeout);
+    };
   }, [
     prefersReducedMotion,
     registerCleanup,

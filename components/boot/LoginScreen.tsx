@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { AUTH_STEPS } from "./bootConfig";
 
 type LoginScreenProps = {
-  sessionId: string;
+  sessionId: string | null;
   stepIndex: number;
   isGranted: boolean;
   onSkip: () => void;
@@ -41,8 +41,10 @@ export function LoginScreen({
 
         <div className="mt-6 grid gap-4 text-sm text-green-100/90 sm:grid-cols-2">
           <Field label="User">OPERATIVE XN-17</Field>
-          <Field label="Clearance">LEVEL {sessionId.length > 10 ? "OMEGA" : "V"}</Field>
-          <Field label="Token">{sessionId}</Field>
+          <Field label="Clearance">
+            LEVEL {sessionId && sessionId.length > 10 ? "OMEGA" : "V"}
+          </Field>
+          <Field label="Token">{sessionId ?? "PENDING"}</Field>
           <Field label="Status">
             <span
               className={clsx(

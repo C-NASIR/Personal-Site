@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 type BootScreenProps = {
   lines: readonly string[];
   visibleCount: number;
-  sessionId: string;
+  sessionId: string | null;
   onSkip: () => void;
 };
 
@@ -70,9 +70,11 @@ export function BootScreen({
         </p>
         <div className="mt-4 grid gap-4 text-green-200/90 sm:grid-cols-2 lg:grid-cols-4">
           <MetadataItem label="Clearance">
-            Level {sessionId.length > 10 ? "VII" : "IV"}
+            Level {sessionId && sessionId.length > 10 ? "VII" : "IV"}
           </MetadataItem>
-          <MetadataItem label="Session ID">{sessionId}</MetadataItem>
+          <MetadataItem label="Session ID">
+            {sessionId ?? "INITIALIZING"}
+          </MetadataItem>
           <MetadataItem label="System time">
             {systemTime.toLocaleTimeString(undefined, {
               hour: "2-digit",

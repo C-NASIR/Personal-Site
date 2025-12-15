@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { directoryMap, type DirectoryId } from "@/lib/directories";
 import type { ContentRecord } from "@/lib/content/types";
 
 import { FileTable, type SortDirection, type SortKey } from "./FileTable";
 import { InspectorPanel } from "./InspectorPanel";
+import { DossierModal } from "./DossierModal";
 
 type DashboardScreenProps = {
   directory: DirectoryId;
@@ -18,7 +18,6 @@ const DEFAULT_SORT_KEY: SortKey = "updated";
 const DEFAULT_SORT_DIRECTION: SortDirection = "desc";
 
 export function DashboardScreen({ directory, records }: DashboardScreenProps) {
-  const router = useRouter();
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
   const [sortDirection, setSortDirection] =
@@ -26,6 +25,7 @@ export function DashboardScreen({ directory, records }: DashboardScreenProps) {
   const [selectedId, setSelectedId] = useState<string | null>(
     () => records[0]?.id ?? null,
   );
+  const [modalRecord, setModalRecord] = useState<ContentRecord | null>(null);
 
   const filteredFiles = useMemo(() => {
     if (!query.trim()) {
@@ -74,10 +74,12 @@ export function DashboardScreen({ directory, records }: DashboardScreenProps) {
   const selectedFileFromState = selectedId
     ? sortedFiles.find((file) => file.id === selectedId)
     : undefined;
-  const selectedFile = selectedFileFromState ?? sortedFiles[0];
-  const safeSelectedIndex = selectedFile
-    ? sortedFiles.findIndex((file) => file.id === selectedFile.id)
-    : null;
+  const fallbackFile = sortedFiles[0];
+  const selectedFile = selectedFileFromState ?? fallbackFile;
+  const safeSelectedIndex =
+    selectedFile && sortedFiles.length
+      ? sortedFiles.findIndex((file) => file.id === selectedFile.id)
+      : null;
 
   const handleSortChange = useCallback(
     (key: SortKey) => {
@@ -92,12 +94,9 @@ export function DashboardScreen({ directory, records }: DashboardScreenProps) {
     [sortKey],
   );
 
-  const handleOpen = useCallback(
-    (file: ContentRecord) => {
-      router.push(`/files/${file.directory}/${file.slug}`);
-    },
-    [router],
-  );
+  const handleOpen = useCallback((file: ContentRecord) => {
+    setModalRecord(file);
+  }, []);
 
   const info = directoryMap[directory];
 
@@ -153,6 +152,11 @@ export function DashboardScreen({ directory, records }: DashboardScreenProps) {
         />
         <InspectorPanel file={selectedFile} onOpen={handleOpen} />
       </div>
+
+      <DossierModal
+        record={modalRecord}
+        onClose={() => setModalRecord(null)}
+      />
     </section>
   );
 }

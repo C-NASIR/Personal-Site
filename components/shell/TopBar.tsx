@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export type BreadcrumbItem = {
   label: string;
@@ -14,15 +14,20 @@ type TopBarProps = {
 
 export function TopBar({ breadcrumbs }: TopBarProps) {
   const [clock, setClock] = useState(() => new Date());
-  const sessionId = useMemo(() => createSessionId(), []);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
+    const sessionTimeout = window.setTimeout(() => {
+      setSessionId(createSessionId());
+    }, 0);
+
     const intervalId = window.setInterval(() => {
       setClock(new Date());
     }, 1000);
 
     return () => {
       window.clearInterval(intervalId);
+      window.clearTimeout(sessionTimeout);
     };
   }, []);
 
@@ -60,7 +65,7 @@ export function TopBar({ breadcrumbs }: TopBarProps) {
               second: "2-digit",
             })}
           </Status>
-          <Status label="Session">{sessionId}</Status>
+          <Status label="Session">{sessionId ?? "INITIALIZING"}</Status>
           <Status label="Systems">
             <span className="text-green-200">Nominal</span>
           </Status>

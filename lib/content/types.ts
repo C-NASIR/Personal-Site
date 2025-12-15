@@ -1,3 +1,5 @@
+import type { MDXRemoteSerializeResult } from "next-mdx-remote";
+
 import type { DirectoryId } from "@/lib/directories";
 
 export type Classification =
@@ -29,5 +31,5 @@ export type ContentRecord = {
   stack?: string[];
   links?: LinkItem[];
   body: string;
+  mdx: MDXRemoteSerializeResult;
 };
-

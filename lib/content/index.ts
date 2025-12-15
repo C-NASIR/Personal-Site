@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import matter from "gray-matter";
 import { cache } from "react";
+import { serialize } from "next-mdx-remote/serialize";
 
 import type { DirectoryId } from "@/lib/directories";
 import { logEntries } from "@/content/logs/entries";
@@ -76,6 +77,7 @@ const loadCaseFiles = cache(async () => {
       const { data, content } = await readMdxFile(CASE_DIR, file);
       const frontmatter = data as Partial<CaseFrontmatter>;
       validateFrontmatter(frontmatter, ["id", "title", "classification", "status", "updatedAt", "owner", "role", "timeframe", "stack", "tags", "summary"], `case/${file}`);
+      const mdx = await serialize(content);
       const normalized = normalizeRecord({
         id: frontmatter.id!,
         slug,
@@ -92,6 +94,7 @@ const loadCaseFiles = cache(async () => {
         stack: frontmatter.stack,
         links: frontmatter.links,
         body: content,
+        mdx,
       });
       return normalized;
     }),
@@ -106,6 +109,7 @@ const loadIntelReports = cache(async () => {
       const { data, content } = await readMdxFile(INTEL_DIR, file);
       const frontmatter = data as Partial<IntelFrontmatter>;
       validateFrontmatter(frontmatter, ["id", "title", "classification", "status", "publishedAt", "tags", "summary"], `intel/${file}`);
+      const mdx = await serialize(content);
       return normalizeRecord({
         id: frontmatter.id!,
         slug,
@@ -118,6 +122,7 @@ const loadIntelReports = cache(async () => {
         summary: frontmatter.summary!,
         links: frontmatter.links,
         body: content,
+        mdx,
       });
     }),
   );
@@ -131,6 +136,7 @@ const loadCredentials = cache(async () => {
       const { data, content } = await readMdxFile(CREDENTIALS_DIR, file);
       const frontmatter = data as Partial<CredentialFrontmatter>;
       validateFrontmatter(frontmatter, ["id", "title", "classification", "status", "updatedAt", "tags", "summary"], `credentials/${file}`);
+      const mdx = await serialize(content);
       return normalizeRecord({
         id: frontmatter.id!,
         slug,
@@ -144,15 +150,17 @@ const loadCredentials = cache(async () => {
         owner: frontmatter.owner,
         links: frontmatter.links,
         body: content,
+        mdx,
       });
     }),
   );
 });
 
 const loadLogs = cache(async () => {
-  return logEntries.map((entry) =>
-    normalizeRecord({
-      id: `LG-${entry.slug}`.toUpperCase(),
+  return Promise.all(
+    logEntries.map(async (entry) =>
+      normalizeRecord({
+        id: `LG-${entry.slug}`.toUpperCase(),
       slug: entry.slug,
       directory: "logs",
       title: entry.title,
@@ -162,8 +170,10 @@ const loadLogs = cache(async () => {
       tags: entry.tags ?? [],
       summary: entry.summary ?? entry.body.slice(0, 160),
       links: entry.links,
-      body: entry.body,
-    }),
+        body: entry.body,
+        mdx: await serialize(entry.body),
+      }),
+    ),
   );
 });
 
