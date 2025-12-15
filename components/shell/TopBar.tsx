@@ -57,6 +57,13 @@ export function TopBar({ breadcrumbs }: TopBarProps) {
         </nav>
 
         <div className="flex flex-wrap items-center gap-4 text-[0.6rem] tracking-[0.35em]">
+          <button
+            className="rounded border border-green-700/50 px-3 py-1 text-[0.55rem] uppercase tracking-[0.4em] text-green-200 transition hover:border-green-400 hover:text-green-50"
+            type="button"
+            onClick={handleOpenCommandPalette}
+          >
+            Search ⌘K
+          </button>
           <Status label="Clearance">Level VII</Status>
           <Status label="Clock">
             {clock.toLocaleTimeString(undefined, {
@@ -98,6 +105,10 @@ function createSessionId() {
     token += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return token;
+}
+
+function handleOpenCommandPalette() {
+  window.dispatchEvent(new CustomEvent("command-palette:open"));
 }
 
 export default TopBar;

@@ -5,22 +5,28 @@ import {
   directoryRoute,
   type DirectoryId,
 } from "@/lib/directories";
+import type { SearchDocument } from "@/lib/search/index";
 
+import { CommandPalette } from "../command/CommandPalette";
 import { Sidebar } from "./Sidebar";
 import { TopBar, type BreadcrumbItem } from "./TopBar";
 
 type AppShellProps = {
   activeDirectory?: DirectoryId;
   directoryCounts: Record<DirectoryId, number>;
+  searchDocuments: SearchDocument[];
   children: ReactNode;
   breadcrumbs?: BreadcrumbItem[];
+  showCommandPalette?: boolean;
 };
 
 export function AppShell({
   activeDirectory,
   directoryCounts,
+  searchDocuments,
   breadcrumbs,
   children,
+  showCommandPalette = true,
 }: AppShellProps) {
   const defaultBreadcrumbs: BreadcrumbItem[] =
     breadcrumbs ??
@@ -53,6 +59,9 @@ export function AppShell({
           </main>
         </div>
       </div>
+      {showCommandPalette ? (
+        <CommandPalette documents={searchDocuments} />
+      ) : null}
     </div>
   );
 }

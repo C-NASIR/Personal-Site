@@ -9,7 +9,6 @@ import { cache } from "react";
 import { serialize } from "next-mdx-remote/serialize";
 
 import type { DirectoryId } from "@/lib/directories";
-import { logEntries } from "@/content/logs/entries";
 import type {
   Classification,
   ContentRecord,
@@ -21,6 +20,7 @@ const CONTENT_ROOT = path.join(process.cwd(), "content");
 const CASE_DIR = path.join(CONTENT_ROOT, "case");
 const INTEL_DIR = path.join(CONTENT_ROOT, "intel");
 const CREDENTIALS_DIR = path.join(CONTENT_ROOT, "credentials");
+const LOGS_DIR = path.join(CONTENT_ROOT, "logs");
 
 const CLASSIFICATIONS: Classification[] = [
   "UNCLASSIFIED",
@@ -66,6 +66,17 @@ type CredentialFrontmatter = {
   tags: string[];
   summary: string;
   owner?: string;
+  links?: LinkItem[];
+};
+
+type LogFrontmatter = {
+  id: string;
+  title: string;
+  classification: Classification;
+  status: FileStatus;
+  date: string;
+  tags: string[];
+  summary: string;
   links?: LinkItem[];
 };
 
@@ -157,23 +168,33 @@ const loadCredentials = cache(async () => {
 });
 
 const loadLogs = cache(async () => {
+  const files = await readDirectoryFiles(LOGS_DIR);
   return Promise.all(
-    logEntries.map(async (entry) =>
-      normalizeRecord({
-        id: `LG-${entry.slug}`.toUpperCase(),
-      slug: entry.slug,
-      directory: "logs",
-      title: entry.title,
-      classification: ensureClassification(entry.classification ?? "CONFIDENTIAL", entry.slug),
-      status: ensureStatus(entry.status ?? "ACTIVE", entry.slug),
-      updatedAt: normalizeDate(entry.date, entry.slug),
-      tags: entry.tags ?? [],
-      summary: entry.summary ?? entry.body.slice(0, 160),
-      links: entry.links,
-        body: entry.body,
-        mdx: await serialize(entry.body),
-      }),
-    ),
+    files.map(async (file) => {
+      const slug = getSlug(file);
+      const { data, content } = await readMdxFile(LOGS_DIR, file);
+      const frontmatter = data as Partial<LogFrontmatter>;
+      validateFrontmatter(
+        frontmatter,
+        ["id", "title", "classification", "status", "date", "tags", "summary"],
+        `logs/${file}`,
+      );
+      const mdx = await serialize(content);
+      return normalizeRecord({
+        id: frontmatter.id!,
+        slug,
+        directory: "logs",
+        title: frontmatter.title!,
+        classification: ensureClassification(frontmatter.classification!, file),
+        status: ensureStatus(frontmatter.status!, file),
+        updatedAt: normalizeDate(frontmatter.date!, file),
+        tags: frontmatter.tags!,
+        summary: frontmatter.summary!,
+        links: frontmatter.links,
+        body: content,
+        mdx,
+      });
+    }),
   );
 });
 

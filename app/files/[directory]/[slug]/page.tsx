@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { DossierViewer } from "@/components/dossier/DossierViewer";
 import { AppShell } from "@/components/shell/AppShell";
 import {
+  getAllRecords,
   getAllSlugsByDirectory,
   getDirectoryCounts,
   getRecordBySlug,
@@ -14,6 +15,7 @@ import {
   isDirectoryId,
   type DirectoryId,
 } from "@/lib/directories";
+import { buildSearchIndex } from "@/lib/search/index";
 
 interface FileDetailPageProps {
   params: { directory: string; slug: string };
@@ -41,14 +43,17 @@ export default async function FileDetailPage({ params }: FileDetailPageProps) {
   }
 
   const directoryId = directorySlug as DirectoryId;
-  const [directoryCounts, dossier] = await Promise.all([
+  const [directoryCounts, dossier, allRecords] = await Promise.all([
     getDirectoryCounts(),
     getRecordBySlug(directoryId, params.slug),
+    getAllRecords(),
   ]);
 
   if (!dossier) {
     notFound();
   }
+
+  const searchDocuments = buildSearchIndex(allRecords);
 
   const breadcrumbs = [
     {
@@ -63,6 +68,7 @@ export default async function FileDetailPage({ params }: FileDetailPageProps) {
       activeDirectory={directoryId}
       breadcrumbs={breadcrumbs}
       directoryCounts={directoryCounts}
+      searchDocuments={searchDocuments}
     >
       <DossierViewer directory={directoryMap[directoryId]} file={dossier} />
     </AppShell>

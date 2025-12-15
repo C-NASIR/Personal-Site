@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { DashboardScreen } from "@/components/dashboard/DashboardScreen";
 import { AppShell } from "@/components/shell/AppShell";
 import {
+  getAllRecords,
   getDirectoryCounts,
   getDirectoryRecords,
 } from "@/lib/content";
+import { buildSearchIndex } from "@/lib/search/index";
 import {
   directories,
   isDirectoryId,
@@ -30,15 +32,18 @@ export default async function DirectoryPage({ params }: DirectoryPageProps) {
   }
 
   const directoryId = directorySlug as DirectoryId;
-  const [directoryCounts, records] = await Promise.all([
+  const [directoryCounts, records, allRecords] = await Promise.all([
     getDirectoryCounts(),
     getDirectoryRecords(directoryId),
+    getAllRecords(),
   ]);
+  const searchDocuments = buildSearchIndex(allRecords);
 
   return (
     <AppShell
       activeDirectory={directoryId}
       directoryCounts={directoryCounts}
+      searchDocuments={searchDocuments}
     >
       <DashboardScreen
         key={directoryId}
