@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import {
   directoryMap,
@@ -16,7 +17,13 @@ type SidebarProps = {
 };
 
 export function Sidebar({ activeDirectory, counts }: SidebarProps) {
-  const currentDirectory = activeDirectory ?? "case";
+  const pathname = usePathname();
+  const currentDirectory = activeDirectory ?? null;
+  const profileLinks = [
+    { label: "Identity", href: "/about" },
+    { label: "Credentials", href: "/credentials" },
+    { label: "Secure Comms", href: "/contact" },
+  ];
 
   return (
     <aside className="hidden w-72 flex-shrink-0 border-r border-green-900/40 bg-black/50 px-4 py-6 text-sm text-green-100/80 lg:flex lg:flex-col">
@@ -25,8 +32,7 @@ export function Sidebar({ activeDirectory, counts }: SidebarProps) {
       </p>
       <ul className="mt-4 flex-1 space-y-2">
         {directories.map((directory) => {
-          const isActive = directory.id === currentDirectory;
-
+          const isActive = currentDirectory === directory.id;
           return (
             <li key={directory.id}>
               <Link
@@ -53,11 +59,39 @@ export function Sidebar({ activeDirectory, counts }: SidebarProps) {
           );
         })}
       </ul>
-      <div className="text-[0.6rem] uppercase tracking-[0.35em] text-green-500/70">
-        Active node: {directoryMap[currentDirectory].label}
+      <div className="mt-6">
+        <p className="text-[0.6rem] uppercase tracking-[0.5em] text-green-500/80">
+          Profile & Comms
+        </p>
+        <ul className="mt-3 space-y-2 text-[0.9rem]">
+          {profileLinks.map((link) => {
+            const isActive = pathname?.startsWith(link.href);
+            return (
+              <li key={link.href}>
+                <Link
+                  className={clsx(
+                    "block rounded border px-3 py-2 text-sm uppercase tracking-[0.35em] transition",
+                    isActive
+                      ? "border-green-400/50 bg-green-500/10 text-green-50"
+                      : "border-green-900/30 bg-black/40 hover:border-green-600/40 hover:text-green-50",
+                  )}
+                  href={link.href}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </div>
+      {currentDirectory ? (
+        <div className="mt-4 text-[0.6rem] uppercase tracking-[0.35em] text-green-500/70">
+          Active node: {directoryMap[currentDirectory].label}
+        </div>
+      ) : null}
     </aside>
   );
 }
 
 export default Sidebar;
+

@@ -44,6 +44,14 @@ const NAVIGATION_COMMANDS: CommandItem[] = [
     meta: "Navigation",
     keywords: ["home", "dashboard", "main"],
   },
+  {
+    id: "nav-about",
+    label: "Go to Identity Profile",
+    route: "/about",
+    type: "navigation",
+    meta: "Navigation",
+    keywords: ["about", "identity", "profile"],
+  },
   ...directories.map((directory) => ({
     id: `nav-${directory.id}`,
     label: `Go to ${directory.label}`,
@@ -57,6 +65,22 @@ const NAVIGATION_COMMANDS: CommandItem[] = [
       directory.label.replace(/ Files| Reports| Logs| Credentials/gi, ""),
     ].map((keyword) => keyword.toLowerCase()),
   })),
+  {
+    id: "nav-credentials",
+    label: "Go to Credentials Overview",
+    route: "/credentials",
+    type: "navigation",
+    meta: "Navigation",
+    keywords: ["credentials", "resume", "references"],
+  },
+  {
+    id: "nav-contact",
+    label: "Open Secure Comms",
+    route: "/contact",
+    type: "navigation",
+    meta: "Navigation",
+    keywords: ["contact", "email", "secure"],
+  },
   {
     id: "nav-search",
     label: "Search Everything",

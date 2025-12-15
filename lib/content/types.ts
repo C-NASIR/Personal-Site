@@ -30,6 +30,7 @@ export type ContentRecord = {
   timeframe?: string;
   stack?: string[];
   links?: LinkItem[];
+  pdfUrl?: string;
   body: string;
   mdx: MDXRemoteSerializeResult;
 };

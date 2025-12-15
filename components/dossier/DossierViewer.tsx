@@ -14,7 +14,7 @@ type DossierViewerProps = {
 
 export function DossierViewer({ file, directory }: DossierViewerProps) {
   return (
-    <section className="flex h-full flex-col gap-6 p-6">
+    <section className="flex h-full flex-col gap-6 p-6 print:bg-white print:text-black">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-green-900/40 pb-4">
         <div>
           <p className="text-[0.6rem] uppercase tracking-[0.35em] text-green-500/70">
@@ -27,12 +27,24 @@ export function DossierViewer({ file, directory }: DossierViewerProps) {
             {file.summary}
           </p>
         </div>
-        <Link
-          className="text-[0.65rem] uppercase tracking-[0.35em] text-green-300/80 underline decoration-green-500/60 underline-offset-4 transition hover:text-green-50"
-          href={directoryRoute(directory.id)}
-        >
-          ← Back to {directory.label}
-        </Link>
+        <div className="flex flex-col items-end gap-2 text-right">
+          <Link
+            className="text-[0.65rem] uppercase tracking-[0.35em] text-green-300/80 underline decoration-green-500/60 underline-offset-4 transition hover:text-green-50 print:hidden"
+            href={directoryRoute(directory.id)}
+          >
+            ← Back to {directory.label}
+          </Link>
+          {file.pdfUrl ? (
+            <a
+              className="rounded border border-green-500/60 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-green-50 hover:border-green-300 print:hidden"
+              href={file.pdfUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Download PDF
+            </a>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid gap-4 text-xs uppercase tracking-[0.35em] text-green-400/70 sm:grid-cols-2 lg:grid-cols-4">
@@ -96,7 +108,7 @@ export function DossierViewer({ file, directory }: DossierViewerProps) {
         ) : null}
       </div>
 
-      <article className="flex-1 overflow-auto rounded border border-green-900/40 bg-black/60 p-6 text-sm leading-relaxed text-green-100/90">
+      <article className="flex-1 overflow-auto rounded border border-green-900/40 bg-black/60 p-6 text-sm leading-relaxed text-green-100/90 print:border-none print:bg-white print:p-0 print:text-black">
         <MDXRemote source={file.body} components={mdxComponents} />
       </article>
     </section>

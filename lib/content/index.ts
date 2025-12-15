@@ -44,6 +44,7 @@ type CaseFrontmatter = {
   tags: string[];
   summary: string;
   links?: LinkItem[];
+  pdfUrl?: string;
 };
 
 type IntelFrontmatter = {
@@ -55,6 +56,7 @@ type IntelFrontmatter = {
   tags: string[];
   summary: string;
   links?: LinkItem[];
+  pdfUrl?: string;
 };
 
 type CredentialFrontmatter = {
@@ -67,6 +69,7 @@ type CredentialFrontmatter = {
   summary: string;
   owner?: string;
   links?: LinkItem[];
+  pdfUrl?: string;
 };
 
 type LogFrontmatter = {
@@ -78,6 +81,7 @@ type LogFrontmatter = {
   tags: string[];
   summary: string;
   links?: LinkItem[];
+  pdfUrl?: string;
 };
 
 const loadCaseFiles = cache(async () => {
@@ -104,6 +108,7 @@ const loadCaseFiles = cache(async () => {
         timeframe: frontmatter.timeframe,
         stack: frontmatter.stack,
         links: frontmatter.links,
+        pdfUrl: frontmatter.pdfUrl ? String(frontmatter.pdfUrl) : undefined,
         body: content,
         mdx,
       });
@@ -132,6 +137,7 @@ const loadIntelReports = cache(async () => {
         tags: frontmatter.tags!,
         summary: frontmatter.summary!,
         links: frontmatter.links,
+        pdfUrl: frontmatter.pdfUrl ? String(frontmatter.pdfUrl) : undefined,
         body: content,
         mdx,
       });
@@ -160,6 +166,7 @@ const loadCredentials = cache(async () => {
         summary: frontmatter.summary!,
         owner: frontmatter.owner,
         links: frontmatter.links,
+        pdfUrl: frontmatter.pdfUrl ? String(frontmatter.pdfUrl) : undefined,
         body: content,
         mdx,
       });
@@ -191,6 +198,7 @@ const loadLogs = cache(async () => {
         tags: frontmatter.tags!,
         summary: frontmatter.summary!,
         links: frontmatter.links,
+        pdfUrl: frontmatter.pdfUrl ? String(frontmatter.pdfUrl) : undefined,
         body: content,
         mdx,
       });

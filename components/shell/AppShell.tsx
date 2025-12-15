@@ -51,10 +51,16 @@ export function AppShell({
         }}
       />
       <div className="relative z-10 flex min-h-screen flex-col">
+        <a className="skip-link" href="#main-content">
+          Skip to main content
+        </a>
         <TopBar breadcrumbs={defaultBreadcrumbs} />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar activeDirectory={activeDirectory} counts={directoryCounts} />
-          <main className="flex-1 overflow-hidden border-l border-green-900/30 bg-black/40">
+          <main
+            className="flex-1 overflow-hidden border-l border-green-900/30 bg-black/40"
+            id="main-content"
+          >
             {children}
           </main>
         </div>

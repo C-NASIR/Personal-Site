@@ -15,6 +15,11 @@ type TopBarProps = {
 export function TopBar({ breadcrumbs }: TopBarProps) {
   const [clock, setClock] = useState(() => new Date());
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const quickNav = [
+    { label: "About", href: "/about" },
+    { label: "Credentials", href: "/credentials" },
+    { label: "Contact", href: "/contact" },
+  ];
 
   useEffect(() => {
     const sessionTimeout = window.setTimeout(() => {
@@ -56,6 +61,17 @@ export function TopBar({ breadcrumbs }: TopBarProps) {
           ))}
         </nav>
 
+        <div className="flex flex-wrap items-center justify-end gap-3 text-[0.55rem] tracking-[0.35em] text-green-300">
+          {quickNav.map((item) => (
+            <Link
+              className="uppercase tracking-[0.35em] text-green-200 transition hover:text-green-50"
+              href={item.href}
+              key={item.href}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
         <div className="flex flex-wrap items-center gap-4 text-[0.6rem] tracking-[0.35em]">
           <button
             className="rounded border border-green-700/50 px-3 py-1 text-[0.55rem] uppercase tracking-[0.4em] text-green-200 transition hover:border-green-400 hover:text-green-50"
