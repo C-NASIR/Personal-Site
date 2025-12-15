@@ -1,0 +1,64 @@
+'use client';
+
+import clsx from "clsx";
+import Link from "next/link";
+
+import {
+  directoryCounts,
+  directoryMap,
+  directoryRoute,
+  directories,
+  type DirectoryId,
+} from "@/lib/mockData";
+
+type SidebarProps = {
+  activeDirectory?: DirectoryId;
+};
+
+export function Sidebar({ activeDirectory }: SidebarProps) {
+  const currentDirectory = activeDirectory ?? "case";
+
+  return (
+    <aside className="hidden w-72 flex-shrink-0 border-r border-green-900/40 bg-black/50 px-4 py-6 text-sm text-green-100/80 lg:flex lg:flex-col">
+      <p className="text-[0.6rem] uppercase tracking-[0.5em] text-green-500/80">
+        Directories
+      </p>
+      <ul className="mt-4 flex-1 space-y-2">
+        {directories.map((directory) => {
+          const isActive = directory.id === currentDirectory;
+
+          return (
+            <li key={directory.id}>
+              <Link
+                className={clsx(
+                  "flex flex-col gap-1 rounded border px-3 py-2 transition",
+                  isActive
+                    ? "border-green-400/50 bg-green-500/10 text-green-100 shadow-inner shadow-green-400/30"
+                    : "border-green-900/30 bg-black/40 hover:border-green-600/40 hover:text-green-50",
+                )}
+                href={directoryRoute(directory.id)}
+              >
+                <span className="text-xs font-semibold uppercase tracking-[0.4em]">
+                  {directory.label}
+                </span>
+                <span className="text-[0.65rem] uppercase tracking-[0.3em] text-green-300/70">
+                  {directoryCounts[directory.id]}{" "}
+                  {directoryCounts[directory.id] === 1 ? "Entry" : "Entries"}
+                </span>
+                <span className="text-[0.65rem] leading-relaxed text-green-200/70">
+                  {directory.description}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="text-[0.6rem] uppercase tracking-[0.35em] text-green-500/70">
+        Active node: {directoryMap[currentDirectory].label}
+      </div>
+    </aside>
+  );
+}
+
+export default Sidebar;
+
