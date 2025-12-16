@@ -71,7 +71,7 @@ export function SearchResults({
                     ? "bg-green-500/10 text-green-50"
                     : "hover:bg-green-400/5",
                 )}
-                key={result.document.id}
+                key={`${result.document.directory}-${result.document.id}`}
                 onClick={() => onSelect(index)}
                 onDoubleClick={onOpen}
                 role="option"
