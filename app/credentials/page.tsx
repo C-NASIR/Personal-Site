@@ -6,6 +6,7 @@ import {
   getDirectoryCounts,
   getDirectoryRecords,
 } from "@/lib/content";
+import { getDirectoryMetas } from "@/lib/directories";
 import { buildSearchIndex } from "@/lib/search/index";
 
 export const metadata = buildPageMetadata({
@@ -15,16 +16,19 @@ export const metadata = buildPageMetadata({
 });
 
 export default async function CredentialsPage() {
-  const [directoryCounts, credentialRecords, allRecords] = await Promise.all([
-    getDirectoryCounts(),
-    getDirectoryRecords("credentials"),
-    getAllRecords(),
-  ]);
+  const [directoryCounts, credentialRecords, allRecords, directories] =
+    await Promise.all([
+      getDirectoryCounts(),
+      getDirectoryRecords("credentials"),
+      getAllRecords(),
+      getDirectoryMetas(),
+    ]);
 
   const searchDocuments = buildSearchIndex(allRecords);
 
   return (
     <AppShell
+      directories={directories}
       activeDirectory="credentials"
       directoryCounts={directoryCounts}
       searchDocuments={searchDocuments}
@@ -47,4 +51,3 @@ export default async function CredentialsPage() {
     </AppShell>
   );
 }
-

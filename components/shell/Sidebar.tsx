@@ -4,12 +4,8 @@ import clsx from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import {
-  directoryMap,
-  directoryRoute,
-  directories,
-  type DirectoryId,
-} from "@/lib/directories";
+import type { DirectoryId } from "@/lib/directories";
+import { useDirectoryMetadata } from "../providers/DirectoryProvider";
 
 type SidebarProps = {
   activeDirectory?: DirectoryId;
@@ -18,6 +14,7 @@ type SidebarProps = {
 
 export function Sidebar({ activeDirectory, counts }: SidebarProps) {
   const pathname = usePathname();
+  const { directories, directoryMap } = useDirectoryMetadata();
   const currentDirectory = activeDirectory ?? null;
   const profileLinks = [
     { label: "Identity", href: "/about" },
@@ -42,7 +39,7 @@ export function Sidebar({ activeDirectory, counts }: SidebarProps) {
                     ? "border-green-400/50 bg-green-500/10 text-green-100 shadow-inner shadow-green-400/30"
                     : "border-green-900/30 bg-black/40 hover:border-green-600/40 hover:text-green-50",
                 )}
-                href={directoryRoute(directory.id)}
+                href={directory.route}
               >
                 <span className="text-xs font-semibold uppercase tracking-[0.4em]">
                   {directory.label}
@@ -86,7 +83,10 @@ export function Sidebar({ activeDirectory, counts }: SidebarProps) {
       </div>
       {currentDirectory ? (
         <div className="mt-4 text-[0.6rem] uppercase tracking-[0.35em] text-green-500/70">
-          Active node: {directoryMap[currentDirectory].label}
+          Active node:{" "}
+          {directoryMap[currentDirectory]
+            ? directoryMap[currentDirectory].label
+            : currentDirectory}
         </div>
       ) : null}
     </aside>

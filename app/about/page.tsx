@@ -3,6 +3,7 @@ import { SkillsMatrix } from "@/components/profile/SkillsMatrix";
 import { AppShell } from "@/components/shell/AppShell";
 import { buildPageMetadata } from "@/components/seo/metadata";
 import { getAllRecords, getDirectoryCounts } from "@/lib/content";
+import { getDirectoryMetas } from "@/lib/directories";
 import { buildSearchIndex } from "@/lib/search/index";
 import { getIdentityProfile, getSkillsMatrix } from "@/lib/profile";
 
@@ -17,17 +18,20 @@ export const metadata = buildPageMetadata({
 });
 
 export default async function AboutPage() {
-  const [directoryCounts, allRecords, profile, skills] = await Promise.all([
-    getDirectoryCounts(),
-    getAllRecords(),
-    getIdentityProfile(),
-    getSkillsMatrix(),
-  ]);
+  const [directoryCounts, allRecords, profile, skills, directories] =
+    await Promise.all([
+      getDirectoryCounts(),
+      getAllRecords(),
+      getIdentityProfile(),
+      getSkillsMatrix(),
+      getDirectoryMetas(),
+    ]);
 
   const searchDocuments = buildSearchIndex(allRecords);
 
   return (
     <AppShell
+      directories={directories}
       directoryCounts={directoryCounts}
       searchDocuments={searchDocuments}
     >

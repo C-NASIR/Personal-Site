@@ -2,6 +2,7 @@ import { SecureComms } from "@/components/contact/SecureComms";
 import { AppShell } from "@/components/shell/AppShell";
 import { buildPageMetadata } from "@/components/seo/metadata";
 import { getAllRecords, getDirectoryCounts } from "@/lib/content";
+import { getDirectoryMetas } from "@/lib/directories";
 import { buildSearchIndex } from "@/lib/search/index";
 
 export const metadata = buildPageMetadata({
@@ -11,9 +12,10 @@ export const metadata = buildPageMetadata({
 });
 
 export default async function ContactPage() {
-  const [directoryCounts, allRecords] = await Promise.all([
+  const [directoryCounts, allRecords, directories] = await Promise.all([
     getDirectoryCounts(),
     getAllRecords(),
+    getDirectoryMetas(),
   ]);
   const searchDocuments = buildSearchIndex(allRecords);
 
@@ -25,6 +27,7 @@ export default async function ContactPage() {
 
   return (
     <AppShell
+      directories={directories}
       directoryCounts={directoryCounts}
       searchDocuments={searchDocuments}
     >
@@ -34,4 +37,3 @@ export default async function ContactPage() {
     </AppShell>
   );
 }
-

@@ -8,19 +8,18 @@ import matter from "gray-matter";
 import { cache } from "react";
 import { serialize } from "next-mdx-remote/serialize";
 
-import type { DirectoryId } from "@/lib/directories";
+import {
+  getDirectoryDefinitionById,
+  getDirectoryDefinitions,
+  type DirectoryDefinition,
+  type DirectoryId,
+} from "@/lib/directories";
 import type {
   Classification,
   ContentRecord,
   FileStatus,
   LinkItem,
 } from "./types";
-
-const CONTENT_ROOT = path.join(process.cwd(), "content");
-const CASE_DIR = path.join(CONTENT_ROOT, "case");
-const INTEL_DIR = path.join(CONTENT_ROOT, "intel");
-const CREDENTIALS_DIR = path.join(CONTENT_ROOT, "credentials");
-const LOGS_DIR = path.join(CONTENT_ROOT, "logs");
 
 const CLASSIFICATIONS: Classification[] = [
   "UNCLASSIFIED",
@@ -31,243 +30,39 @@ const CLASSIFICATIONS: Classification[] = [
 
 const STATUSES: FileStatus[] = ["ACTIVE", "ARCHIVED", "DRAFT"];
 
-type CaseFrontmatter = {
-  id: string;
-  title: string;
-  classification: Classification;
-  status: FileStatus;
-  updatedAt: string;
-  owner: string;
-  role: string;
-  timeframe: string;
-  stack: string[];
-  tags: string[];
-  summary: string;
-  links?: LinkItem[];
-  pdfUrl?: string;
-};
-
-type IntelFrontmatter = {
-  id: string;
-  title: string;
-  classification: Classification;
-  status: FileStatus;
-  publishedAt: string;
-  tags: string[];
-  summary: string;
-  links?: LinkItem[];
-  pdfUrl?: string;
-};
-
-type CredentialFrontmatter = {
-  id: string;
-  title: string;
-  classification: Classification;
-  status: FileStatus;
-  updatedAt: string;
-  tags: string[];
-  summary: string;
-  owner?: string;
-  links?: LinkItem[];
-  pdfUrl?: string;
-};
-
-type LogFrontmatter = {
-  id: string;
-  title: string;
-  classification: Classification;
-  status: FileStatus;
-  date: string;
-  tags: string[];
-  summary: string;
-  links?: LinkItem[];
-  pdfUrl?: string;
-};
-
-const loadCaseFiles = cache(async () => {
-  const files = await readDirectoryFiles(CASE_DIR);
-  return Promise.all(
-    files.map(async (file) => {
-      const slug = getSlug(file);
-      const { data, content } = await readMdxFile(CASE_DIR, file);
-      const frontmatter = data as Partial<CaseFrontmatter>;
-      validateFrontmatter(frontmatter, ["id", "title", "classification", "status", "updatedAt", "owner", "role", "timeframe", "stack", "tags", "summary"], `case/${file}`);
-      const mdx = await serialize(content);
-      const normalized = normalizeRecord({
-        id: frontmatter.id!,
-        slug,
-        directory: "case",
-        title: frontmatter.title!,
-        classification: ensureClassification(frontmatter.classification!, file),
-        status: ensureStatus(frontmatter.status!, file),
-        updatedAt: normalizeDate(frontmatter.updatedAt!, file),
-        tags: frontmatter.tags!,
-        summary: frontmatter.summary!,
-        owner: frontmatter.owner,
-        role: frontmatter.role,
-        timeframe: frontmatter.timeframe,
-        stack: frontmatter.stack,
-        links: frontmatter.links,
-        pdfUrl: frontmatter.pdfUrl ? String(frontmatter.pdfUrl) : undefined,
-        body: content,
-        mdx,
-      });
-      return normalized;
-    }),
-  );
+const loadDirectoryRecords = cache(async (directoryId: DirectoryId) => {
+  const definition = await getDirectoryDefinitionById(directoryId);
+  if (!definition) {
+    return [];
+  }
+  return readDirectoryRecords(definition);
 });
-
-const loadIntelReports = cache(async () => {
-  const files = await readDirectoryFiles(INTEL_DIR);
-  return Promise.all(
-    files.map(async (file) => {
-      const slug = getSlug(file);
-      const { data, content } = await readMdxFile(INTEL_DIR, file);
-      const frontmatter = data as Partial<IntelFrontmatter>;
-      validateFrontmatter(frontmatter, ["id", "title", "classification", "status", "publishedAt", "tags", "summary"], `intel/${file}`);
-      const mdx = await serialize(content);
-      return normalizeRecord({
-        id: frontmatter.id!,
-        slug,
-        directory: "intel",
-        title: frontmatter.title!,
-        classification: ensureClassification(frontmatter.classification!, file),
-        status: ensureStatus(frontmatter.status!, file),
-        updatedAt: normalizeDate(frontmatter.publishedAt!, file),
-        tags: frontmatter.tags!,
-        summary: frontmatter.summary!,
-        links: frontmatter.links,
-        pdfUrl: frontmatter.pdfUrl ? String(frontmatter.pdfUrl) : undefined,
-        body: content,
-        mdx,
-      });
-    }),
-  );
-});
-
-const loadCredentials = cache(async () => {
-  const files = await readDirectoryFiles(CREDENTIALS_DIR);
-  return Promise.all(
-    files.map(async (file) => {
-      const slug = getSlug(file);
-      const { data, content } = await readMdxFile(CREDENTIALS_DIR, file);
-      const frontmatter = data as Partial<CredentialFrontmatter>;
-      validateFrontmatter(frontmatter, ["id", "title", "classification", "status", "updatedAt", "tags", "summary"], `credentials/${file}`);
-      const mdx = await serialize(content);
-      return normalizeRecord({
-        id: frontmatter.id!,
-        slug,
-        directory: "credentials",
-        title: frontmatter.title!,
-        classification: ensureClassification(frontmatter.classification!, file),
-        status: ensureStatus(frontmatter.status!, file),
-        updatedAt: normalizeDate(frontmatter.updatedAt!, file),
-        tags: frontmatter.tags!,
-        summary: frontmatter.summary!,
-        owner: frontmatter.owner,
-        links: frontmatter.links,
-        pdfUrl: frontmatter.pdfUrl ? String(frontmatter.pdfUrl) : undefined,
-        body: content,
-        mdx,
-      });
-    }),
-  );
-});
-
-const loadLogs = cache(async () => {
-  const files = await readDirectoryFiles(LOGS_DIR);
-  return Promise.all(
-    files.map(async (file) => {
-      const slug = getSlug(file);
-      const { data, content } = await readMdxFile(LOGS_DIR, file);
-      const frontmatter = data as Partial<LogFrontmatter>;
-      validateFrontmatter(
-        frontmatter,
-        ["id", "title", "classification", "status", "date", "tags", "summary"],
-        `logs/${file}`,
-      );
-      const mdx = await serialize(content);
-      return normalizeRecord({
-        id: frontmatter.id!,
-        slug,
-        directory: "logs",
-        title: frontmatter.title!,
-        classification: ensureClassification(frontmatter.classification!, file),
-        status: ensureStatus(frontmatter.status!, file),
-        updatedAt: normalizeDate(frontmatter.date!, file),
-        tags: frontmatter.tags!,
-        summary: frontmatter.summary!,
-        links: frontmatter.links,
-        pdfUrl: frontmatter.pdfUrl ? String(frontmatter.pdfUrl) : undefined,
-        body: content,
-        mdx,
-      });
-    }),
-  );
-});
-
-export async function getCaseFiles() {
-  return loadCaseFiles();
-}
-
-export async function getIntelReports() {
-  return loadIntelReports();
-}
-
-export async function getCredentials() {
-  return loadCredentials();
-}
-
-export async function getLogs() {
-  return loadLogs();
-}
 
 export async function getDirectoryRecords(directory: DirectoryId) {
-  switch (directory) {
-    case "case":
-      return getCaseFiles();
-    case "intel":
-      return getIntelReports();
-    case "logs":
-      return getLogs();
-    case "credentials":
-      return getCredentials();
-    default:
-      return [];
-  }
+  return loadDirectoryRecords(directory);
 }
 
 export async function getAllRecords() {
-  const [caseFiles, intelReports, logs, credentials] = await Promise.all([
-    getCaseFiles(),
-    getIntelReports(),
-    getLogs(),
-    getCredentials(),
-  ]);
-
-  return [...caseFiles, ...intelReports, ...logs, ...credentials];
+  const definitions = await getDirectoryDefinitions();
+  const results = await Promise.all(
+    definitions.map((definition) => getDirectoryRecords(definition.id)),
+  );
+  return results.flat();
 }
 
 export async function getDirectoryCounts() {
-  const [caseFiles, intelReports, logs, credentials] = await Promise.all([
-    getCaseFiles(),
-    getIntelReports(),
-    getLogs(),
-    getCredentials(),
-  ]);
+  const definitions = await getDirectoryDefinitions();
+  const entries = await Promise.all(
+    definitions.map(async (definition) => {
+      const records = await getDirectoryRecords(definition.id);
+      return [definition.id, records.length] as const;
+    }),
+  );
 
-  return {
-    case: caseFiles.length,
-    intel: intelReports.length,
-    logs: logs.length,
-    credentials: credentials.length,
-  } as Record<DirectoryId, number>;
+  return Object.fromEntries(entries) as Record<DirectoryId, number>;
 }
 
-export async function getRecordBySlug(
-  directory: DirectoryId,
-  slug: string,
-) {
+export async function getRecordBySlug(directory: DirectoryId, slug: string) {
   const records = await getDirectoryRecords(directory);
   return records.find((record) => record.slug === slug);
 }
@@ -275,6 +70,61 @@ export async function getRecordBySlug(
 export async function getAllSlugsByDirectory(directory: DirectoryId) {
   const records = await getDirectoryRecords(directory);
   return records.map((record) => record.slug);
+}
+
+async function readDirectoryRecords(definition: DirectoryDefinition) {
+  const files = await readDirectoryFiles(definition.contentPath);
+  return Promise.all(
+    files.map((file) => readRecordFile(definition, file)),
+  );
+}
+
+async function readRecordFile(
+  definition: DirectoryDefinition,
+  fileName: string,
+) {
+  const filePath = path.join(definition.contentPath, fileName);
+  const slug = getSlug(fileName);
+  const { data, content } = await readMdxFile(filePath);
+  validateFrontmatter(
+    data as Record<string, unknown>,
+    definition.requiredFrontmatter,
+    `${definition.id}/${fileName}`,
+  );
+  const frontmatter = data as Record<string, unknown>;
+  const mdx = await serialize(content);
+
+  const updatedAt = normalizeDate(
+    ensureDateValue(
+      frontmatter[definition.dateField],
+      definition.dateField,
+      fileName,
+    ),
+    fileName,
+  );
+
+  return normalizeRecord({
+    id: ensureString(frontmatter.id, "id", fileName),
+    slug,
+    directory: definition.id,
+    title: ensureString(frontmatter.title, "title", fileName),
+    classification: ensureClassification(
+      frontmatter.classification as Classification,
+      fileName,
+    ),
+    status: ensureStatus(frontmatter.status as FileStatus, fileName),
+    updatedAt,
+    tags: ensureStringArray(frontmatter.tags, "tags", fileName),
+    summary: ensureString(frontmatter.summary, "summary", fileName),
+    owner: optionalString(frontmatter.owner),
+    role: optionalString(frontmatter.role),
+    timeframe: optionalString(frontmatter.timeframe),
+    stack: ensureOptionalStringArray(frontmatter.stack, "stack", fileName),
+    links: ensureLinkItems(frontmatter.links, fileName),
+    pdfUrl: frontmatter.pdfUrl ? String(frontmatter.pdfUrl) : undefined,
+    body: content,
+    mdx,
+  });
 }
 
 function normalizeRecord(record: ContentRecord): ContentRecord {
@@ -299,8 +149,7 @@ async function readDirectoryFiles(directoryPath: string) {
   }
 }
 
-async function readMdxFile(directoryPath: string, fileName: string) {
-  const filePath = path.join(directoryPath, fileName);
+async function readMdxFile(filePath: string) {
   const source = await fs.readFile(filePath, "utf8");
   return matter(source);
 }
@@ -336,7 +185,7 @@ function normalizeDate(value: string, fileName: string) {
 }
 
 function validateFrontmatter(
-  frontmatter: Partial<Record<string, unknown>>,
+  frontmatter: Record<string, unknown>,
   requiredKeys: string[],
   filePath: string,
 ) {
@@ -346,6 +195,87 @@ function validateFrontmatter(
       `Missing required frontmatter field(s) ${missing.join(", ")} in ${filePath}`,
     );
   }
+}
+
+function ensureString(
+  value: unknown,
+  field: string,
+  fileName: string,
+): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`Invalid or missing "${field}" in ${fileName}`);
+  }
+  return value;
+}
+
+function ensureDateValue(
+  value: unknown,
+  field: string,
+  fileName: string,
+): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+  throw new Error(`Invalid or missing "${field}" in ${fileName}`);
+}
+
+function optionalString(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
+
+function ensureStringArray(
+  value: unknown,
+  field: string,
+  fileName: string,
+): string[] {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(`Invalid "${field}" in ${fileName}`);
+  }
+  return value as string[];
+}
+
+function ensureOptionalStringArray(
+  value: unknown,
+  field: string,
+  fileName: string,
+) {
+  if (value === undefined) return undefined;
+  if (
+    Array.isArray(value) &&
+    value.every((item) => typeof item === "string")
+  ) {
+    return value as string[];
+  }
+  throw new Error(`Invalid "${field}" in ${fileName}; expected an array.`);
+}
+
+function ensureLinkItems(
+  value: unknown,
+  fileName: string,
+): LinkItem[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid links value in ${fileName}; expected an array.`);
+  }
+  return value.map((item) => {
+    if (
+      typeof item !== "object" ||
+      item === null ||
+      typeof (item as LinkItem).label !== "string" ||
+      typeof (item as LinkItem).href !== "string"
+    ) {
+      throw new Error(
+        `Invalid link entry in ${fileName}; expected label and href strings.`,
+      );
+    }
+    return {
+      label: (item as LinkItem).label,
+      href: (item as LinkItem).href,
+    };
+  });
 }
 
 export type { ContentRecord, Classification, FileStatus, LinkItem } from "./types";

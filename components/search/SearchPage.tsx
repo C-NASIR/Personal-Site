@@ -7,6 +7,7 @@ import type { DirectoryId } from "@/lib/directories";
 import type { SearchDocument } from "@/lib/search/index";
 
 import { SearchResults } from "./SearchResults";
+import { useDirectoryMetadata } from "../providers/DirectoryProvider";
 
 type SearchPageProps = {
   documents: SearchDocument[];
@@ -51,6 +52,7 @@ const STATUS_OPTIONS: FilterOption<StatusFilter>[] = [
 export function SearchPage({ documents }: SearchPageProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { directories } = useDirectoryMetadata();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<FilterState>({
     directory: "all",
@@ -105,6 +107,22 @@ export function SearchPage({ documents }: SearchPageProps) {
     }
   };
 
+  const directoryOptions = useMemo(
+    () => [
+      { label: "All", value: "all" as const },
+      ...directories.map((directory) => ({
+        label: directory.label,
+        value: directory.id as DirectoryId,
+      })),
+    ],
+    [directories],
+  );
+
+  const directorySummary =
+    directories.length > 0
+      ? directories.map((directory) => directory.label).join(", ")
+      : "the available directories";
+
   return (
     <section className="flex h-full flex-col gap-6 p-6">
       <div className="space-y-4">
@@ -141,13 +159,7 @@ export function SearchPage({ documents }: SearchPageProps) {
               setFilters((prev) => ({ ...prev, directory: value }));
               setSelectedId(null);
             }}
-            options={[
-              { label: "All", value: "all" },
-              { label: "Case Files", value: "case" },
-              { label: "Intel Reports", value: "intel" },
-              { label: "Activity Logs", value: "logs" },
-              { label: "Credentials", value: "credentials" },
-            ]}
+            options={directoryOptions}
           />
           <FilterSelect<ClassificationFilter>
             id="classification-filter"
@@ -187,7 +199,7 @@ export function SearchPage({ documents }: SearchPageProps) {
             <SearchPreview result={selectedResult} />
           ) : (
             <p className="text-xs uppercase tracking-[0.3em] text-green-500/70">
-              Start typing to explore dossiers, intel, logs, and credentials.
+              Start typing to explore {directorySummary}.
             </p>
           )}
         </aside>

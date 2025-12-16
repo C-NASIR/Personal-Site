@@ -15,14 +15,15 @@ export function BootScreen({
   sessionId,
   onSkip,
 }: BootScreenProps) {
-  const [systemTime, setSystemTime] = useState(() => new Date());
+  const [systemTime, setSystemTime] = useState<Date | null>(null);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setSystemTime(new Date());
-    }, 1000);
+    const syncTime = () => setSystemTime(new Date());
+    const timeoutId = window.setTimeout(syncTime, 0);
+    const intervalId = window.setInterval(syncTime, 1000);
 
     return () => {
+      window.clearTimeout(timeoutId);
       window.clearInterval(intervalId);
     };
   }, []);
@@ -76,11 +77,13 @@ export function BootScreen({
             {sessionId ?? "INITIALIZING"}
           </MetadataItem>
           <MetadataItem label="System time">
-            {systemTime.toLocaleTimeString(undefined, {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })}
+            {systemTime
+              ? systemTime.toLocaleTimeString(undefined, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })
+              : "SYNCING"}
           </MetadataItem>
           <MetadataItem label="Status">Console standing by</MetadataItem>
         </div>

@@ -4,7 +4,7 @@ import { MDXRemote } from "next-mdx-remote/rsc";
 
 import type { ContentRecord } from "@/lib/content/types";
 import { formatDate } from "@/lib/format";
-import { directoryRoute, type DirectoryMeta } from "@/lib/directories";
+import type { DirectoryMeta } from "@/lib/directories";
 import { mdxComponents } from "./mdxComponents";
 
 type DossierViewerProps = {
@@ -30,7 +30,7 @@ export function DossierViewer({ file, directory }: DossierViewerProps) {
         <div className="flex flex-col items-end gap-2 text-right">
           <Link
             className="text-[0.65rem] uppercase tracking-[0.35em] text-green-300/80 underline decoration-green-500/60 underline-offset-4 transition hover:text-green-50 print:hidden"
-            href={directoryRoute(directory.id)}
+            href={directory.route}
           >
             ← Back to {directory.label}
           </Link>

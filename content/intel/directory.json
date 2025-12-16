@@ -1,0 +1,15 @@
+{
+  "label": "Intel Reports",
+  "description": "Long-form research and architecture notes gathered while supporting different orgs.",
+  "sortOrder": 20,
+  "dateField": "publishedAt",
+  "requiredFrontmatter": [
+    "id",
+    "title",
+    "classification",
+    "status",
+    "publishedAt",
+    "tags",
+    "summary"
+  ]
+}

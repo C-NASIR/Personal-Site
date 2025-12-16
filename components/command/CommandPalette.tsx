@@ -10,9 +10,9 @@ import {
 } from "react";
 
 import type { SearchDocument } from "@/lib/search/index";
-import { directories } from "@/lib/directories";
 
 import { CommandList } from "./CommandList";
+import { useDirectoryMetadata } from "../providers/DirectoryProvider";
 
 type CommandPaletteProps = {
   documents: SearchDocument[];
@@ -35,7 +35,7 @@ export type CommandResult = {
   score: number;
 };
 
-const NAVIGATION_COMMANDS: CommandItem[] = [
+const STATIC_NAVIGATION_COMMANDS: CommandItem[] = [
   {
     id: "nav-dashboard",
     label: "Go to Dashboard",
@@ -52,19 +52,6 @@ const NAVIGATION_COMMANDS: CommandItem[] = [
     meta: "Navigation",
     keywords: ["about", "identity", "profile"],
   },
-  ...directories.map((directory) => ({
-    id: `nav-directory-${directory.id}`,
-    label: `Go to ${directory.label}`,
-    route: `/files/${directory.id}`,
-    type: "navigation" as const,
-    meta: "Navigation",
-    keywords: [
-      "directory",
-      directory.label,
-      directory.id,
-      directory.label.replace(/ Files| Reports| Logs| Credentials/gi, ""),
-    ].map((keyword) => keyword.toLowerCase()),
-  })),
   {
     id: "nav-credentials",
     label: "Go to Credentials Overview",
@@ -93,6 +80,7 @@ const NAVIGATION_COMMANDS: CommandItem[] = [
 
 export function CommandPalette({ documents }: CommandPaletteProps) {
   const router = useRouter();
+  const { directories } = useDirectoryMetadata();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -166,8 +154,27 @@ export function CommandPalette({ documents }: CommandPaletteProps) {
     return undefined;
   }, [isOpen]);
 
+  const navigationCommands = useMemo(() => {
+    const directoryCommands = directories.map<CommandItem>((directory) => ({
+      id: `nav-directory-${directory.id}`,
+      label: `Go to ${directory.label}`,
+      route: directory.route,
+      type: "navigation",
+      meta: "Navigation",
+      keywords: [
+        "directory",
+        directory.label,
+        directory.id,
+        directory.description,
+      ]
+        .filter(Boolean)
+        .map((keyword) => keyword.toLowerCase()),
+    }));
+    return [...STATIC_NAVIGATION_COMMANDS, ...directoryCommands];
+  }, [directories]);
+
   const filteredCommands = useMemo(() => {
-    const allCommands = [...NAVIGATION_COMMANDS, ...fileCommands];
+    const allCommands = [...navigationCommands, ...fileCommands];
     const terms = query
       .toLowerCase()
       .split(/\s+/)
@@ -211,7 +218,7 @@ export function CommandPalette({ documents }: CommandPaletteProps) {
     }
 
     return results.sort((a, b) => b.score - a.score);
-  }, [fileCommands, query]);
+  }, [fileCommands, navigationCommands, query]);
 
   const safeSelectedIndex =
     filteredCommands.length === 0

@@ -9,8 +9,8 @@ import {
 } from "@/lib/content";
 import { buildSearchIndex } from "@/lib/search/index";
 import {
-  directories,
-  isDirectoryId,
+  getDirectoryDefinitionById,
+  getDirectoryMetas,
   type DirectoryId,
 } from "@/lib/directories";
 
@@ -19,6 +19,7 @@ type DirectoryPageProps = {
 };
 
 export async function generateStaticParams() {
+  const directories = await getDirectoryMetas();
   return directories.map((directory) => ({
     directory: directory.id,
   }));
@@ -28,20 +29,26 @@ export default async function DirectoryPage({ params }: DirectoryPageProps) {
   const { directory } = await params;
   const directorySlug = directory;
 
-  if (!isDirectoryId(directorySlug)) {
+  const directoryDefinition = await getDirectoryDefinitionById(directorySlug);
+
+  if (!directoryDefinition) {
     notFound();
   }
 
-  const directoryId = directorySlug as DirectoryId;
-  const [directoryCounts, records, allRecords] = await Promise.all([
-    getDirectoryCounts(),
-    getDirectoryRecords(directoryId),
-    getAllRecords(),
-  ]);
+  const directoryId = directoryDefinition.id as DirectoryId;
+  const [directoryCounts, records, allRecords, directories] = await Promise.all(
+    [
+      getDirectoryCounts(),
+      getDirectoryRecords(directoryId),
+      getAllRecords(),
+      getDirectoryMetas(),
+    ],
+  );
   const searchDocuments = buildSearchIndex(allRecords);
 
   return (
     <AppShell
+      directories={directories}
       activeDirectory={directoryId}
       directoryCounts={directoryCounts}
       searchDocuments={searchDocuments}
