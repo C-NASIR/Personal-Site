@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect } from "react";
 import { MDXRemote } from "next-mdx-remote";
@@ -39,7 +39,7 @@ export function DossierModal({ record, onClose }: DossierModalProps) {
       <div className="relative flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-green-900/50 bg-zinc-950 shadow-2xl">
         <button
           aria-label="Close dossier"
-          className="absolute right-4 top-4 text-green-200 transition hover:text-green-50"
+          className="absolute right-4 top-4 text-green-200 transition hover:text-green-50 cursor-pointer"
           type="button"
           onClick={onClose}
         >
@@ -56,7 +56,7 @@ export function DossierModal({ record, onClose }: DossierModalProps) {
           </p>
         </header>
 
-        <div className="flex-1 overflow-auto px-6 py-6 text-sm leading-relaxed text-green-100/90">
+        <div className="flex-1 overflow-auto px-6 py-6 text-xl leading-relaxed text-green-100/90">
           <MDXRemote {...record.mdx} components={mdxComponents} />
         </div>
       </div>
@@ -65,4 +65,3 @@ export function DossierModal({ record, onClose }: DossierModalProps) {
 }
 
 export default DossierModal;
-
