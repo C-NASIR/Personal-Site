@@ -37,7 +37,7 @@ export function TopBar({ breadcrumbs }: TopBarProps) {
   }, []);
 
   return (
-    <header className="border-b border-green-900/40 bg-black/60 px-6 py-4 text-xs uppercase tracking-[0.35em] text-green-300/80">
+    <header className="sticky top-0 z-30 border-b border-green-900/40 bg-black/70 px-6 py-4 text-xs uppercase tracking-[0.35em] text-green-300/80 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <nav className="flex flex-wrap items-center gap-2 text-[0.65rem] tracking-[0.4em]">
           {breadcrumbs.map((item, index) => (

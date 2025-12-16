@@ -26,7 +26,7 @@ export function Sidebar({ activeDirectory, counts }: SidebarProps) {
   ];
 
   return (
-    <aside className="hidden w-72 flex-shrink-0 border-r border-green-900/40 bg-black/50 px-4 py-6 text-sm text-green-100/80 lg:flex lg:flex-col">
+    <aside className="hidden h-full w-72 flex-shrink-0 overflow-y-auto border-r border-green-900/40 bg-black/50 px-4 py-6 text-sm text-green-100/80 lg:flex lg:flex-col">
       <p className="text-[0.6rem] uppercase tracking-[0.5em] text-green-500/80">
         Directories
       </p>
@@ -94,4 +94,3 @@ export function Sidebar({ activeDirectory, counts }: SidebarProps) {
 }
 
 export default Sidebar;
-

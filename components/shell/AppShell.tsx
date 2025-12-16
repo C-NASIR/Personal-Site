@@ -40,7 +40,7 @@ export function AppShell({
       : [{ label: "Command Dashboard" }]);
 
   return (
-    <div className="relative min-h-screen bg-zinc-950 text-green-100">
+    <div className="relative min-h-screen bg-zinc-950 text-green-100 lg:h-screen">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-10"
@@ -50,15 +50,15 @@ export function AppShell({
           backgroundSize: "24px 24px",
         }}
       />
-      <div className="relative z-10 flex min-h-screen flex-col">
+      <div className="relative z-10 flex min-h-screen flex-col lg:h-screen">
         <a className="skip-link" href="#main-content">
           Skip to main content
         </a>
         <TopBar breadcrumbs={defaultBreadcrumbs} />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           <Sidebar activeDirectory={activeDirectory} counts={directoryCounts} />
           <main
-            className="flex-1 overflow-hidden border-l border-green-900/30 bg-black/40"
+            className="flex-1 min-h-0 overflow-y-auto border-l border-green-900/30 bg-black/40"
             id="main-content"
           >
             {children}
