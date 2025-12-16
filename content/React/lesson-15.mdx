@@ -1,0 +1,466 @@
+---
+id: CF-2116
+title: Lesson 15 Hooks Deep Dive Custom Hooks Composition and Inversion of Control
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T20:30:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - Hooks
+  - Custom Hooks
+  - Logic Reuse
+  - Composition
+  - Inversion of Control
+  - Side Effects Management
+  - Functional Architecture
+  - Frontend Architecture
+links:
+  - label: Lesson Fourteen
+    href: lesson-fourteen.mdx
+summary: Explores hooks as the primary abstraction for behavior in React, showing how custom hooks enable composable logic reuse, inversion of control, and clean separation between UI structure and application behavior.
+---
+
+# **Lesson 15 — Hooks Deep Dive: Custom Hooks, Composition, and Inversion of Control**
+
+---
+
+### **Context / Motivation**
+
+At this point, you already know React’s fundamental shift:
+
+> _Components describe UI; hooks describe behavior._
+
+Hooks are not just “a way to use state and effects in functions.”
+They represent **a new architecture** — one where _logic_ can be shared, composed, and inverted without changing the component hierarchy.
+
+Before Hooks (in class components), logic reuse was painful.
+Developers tried three main patterns:
+
+1. **Higher-Order Components (HOCs)**
+2. **Render Props**
+3. **Mixins (very old)**
+
+Each solved some problems but introduced others — wrapper hell, prop-passing clutter, or tangled abstractions.
+
+Hooks were introduced in React 16.8 to make logic reuse **declarative, composable, and local.**
+
+---
+
+### **The Problem: Logic Reuse Before Hooks**
+
+Let’s look at an example — tracking mouse position.
+
+#### 🧱 Class component version
+
+```jsx
+class MouseTracker extends React.Component {
+  state = { x: 0, y: 0 };
+
+  handleMove = (e) => {
+    this.setState({ x: e.clientX, y: e.clientY });
+  };
+
+  componentDidMount() {
+    window.addEventListener("mousemove", this.handleMove);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("mousemove", this.handleMove);
+  }
+
+  render() {
+    return (
+      <p>
+        {this.state.x}, {this.state.y}
+      </p>
+    );
+  }
+}
+```
+
+Now imagine another component needs mouse tracking.
+You’d either **copy-paste** the logic or build a **HOC**:
+
+```jsx
+function withMousePosition(Component) {
+  return class extends React.Component {
+    state = { x: 0, y: 0 };
+    handleMove = (e) => this.setState({ x: e.clientX, y: e.clientY });
+    componentDidMount() {
+      window.addEventListener("mousemove", this.handleMove);
+    }
+    componentWillUnmount() {
+      window.removeEventListener("mousemove", this.handleMove);
+    }
+
+    render() {
+      return <Component {...this.props} mouse={this.state} />;
+    }
+  };
+}
+```
+
+That works, but now you have **HOC nesting hell**, unclear data flow, and props duplication.
+
+---
+
+### **The Solution: Custom Hooks**
+
+Hooks let you extract that logic cleanly — without changing your component structure.
+
+```jsx
+function useMousePosition() {
+  const [pos, setPos] = React.useState({ x: 0, y: 0 });
+
+  React.useEffect(() => {
+    function handleMove(e) {
+      setPos({ x: e.clientX, y: e.clientY });
+    }
+    window.addEventListener("mousemove", handleMove);
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, []);
+
+  return pos;
+}
+```
+
+And then use it anywhere:
+
+```jsx
+function MouseTracker() {
+  const { x, y } = useMousePosition();
+  return (
+    <p>
+      {x}, {y}
+    </p>
+  );
+}
+
+function Tooltip() {
+  const { x, y } = useMousePosition();
+  return <div style={{ left: x, top: y }}>Tooltip</div>;
+}
+```
+
+✅ Each component gets its own independent logic instance.
+✅ No wrapper components, no prop plumbing.
+✅ Fully composable — you can combine hooks together easily.
+
+---
+
+### **Why Hooks Are Better Than Components Here**
+
+Let’s summarize **why `useMousePosition()` is better than HOCs or Render Props**:
+
+| Problem with Old Pattern                     | Hook Solution                               |
+| -------------------------------------------- | ------------------------------------------- |
+| Wrapper hell (HOC inside HOC)                | Hooks are flat — no extra layers            |
+| Prop drilling                                | Hooks share state directly via closures     |
+| Hard to combine HOCs (composition explosion) | Hooks compose linearly inside one component |
+| Lifecycle methods spread logic apart         | Hooks group related logic in one function   |
+| Shared logic requires new components         | Hooks share logic without new components    |
+
+Hooks invert the control:
+Components no longer _receive_ behavior; they _pull it in_ declaratively.
+
+---
+
+### **Example 2 — Online Status (Side-Effect + Cleanup)**
+
+**Before Hooks:**
+
+```jsx
+class Status extends React.Component {
+  state = { online: navigator.onLine };
+
+  componentDidMount() {
+    window.addEventListener("online", this.goOnline);
+    window.addEventListener("offline", this.goOffline);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("online", this.goOnline);
+    window.removeEventListener("offline", this.goOffline);
+  }
+
+  goOnline = () => this.setState({ online: true });
+  goOffline = () => this.setState({ online: false });
+
+  render() {
+    return <p>{this.state.online ? "Online" : "Offline"}</p>;
+  }
+}
+```
+
+**With a Hook:**
+
+```jsx
+function useOnlineStatus() {
+  const [online, setOnline] = React.useState(navigator.onLine);
+
+  React.useEffect(() => {
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
+
+  return online;
+}
+
+function Status() {
+  const online = useOnlineStatus();
+  return <p>{online ? "✅ Online" : "❌ Offline"}</p>;
+}
+```
+
+✅ Logic is reusable.
+✅ No duplicated lifecycle methods.
+✅ Cleanup is self-contained.
+
+---
+
+### **Example 3 — Combining Hooks: Composition Power**
+
+Hooks compose naturally, just like functions.
+
+```jsx
+function useUser() {
+  const [user, setUser] = React.useState(null);
+  React.useEffect(() => {
+    fetch("/api/user")
+      .then((r) => r.json())
+      .then(setUser);
+  }, []);
+  return user;
+}
+
+function usePosts(userId) {
+  const [posts, setPosts] = React.useState([]);
+  React.useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/posts?user=${userId}`)
+      .then((r) => r.json())
+      .then(setPosts);
+  }, [userId]);
+  return posts;
+}
+
+function Dashboard() {
+  const user = useUser();
+  const posts = usePosts(user?.id);
+
+  if (!user) return <p>Loading user...</p>;
+  if (!posts.length) return <p>Loading posts...</p>;
+
+  return (
+    <>
+      <h2>{user.name}</h2>
+      <ul>
+        {posts.map((p) => (
+          <li key={p.id}>{p.title}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+```
+
+Each hook manages a slice of behavior.
+They are **independent yet composable** — something class inheritance and HOCs could never achieve without complexity.
+
+---
+
+### **Example 4 — Custom Hooks Encapsulating Control Flow**
+
+Let’s make a hook that handles async loading with error boundaries built-in.
+
+```jsx
+function useAsync(asyncFn, deps = []) {
+  const [state, setState] = React.useState({
+    loading: true,
+    error: null,
+    value: null,
+  });
+
+  React.useEffect(() => {
+    let canceled = false;
+    setState({ loading: true, error: null, value: null });
+
+    asyncFn()
+      .then(
+        (value) => !canceled && setState({ loading: false, value, error: null })
+      )
+      .catch(
+        (error) => !canceled && setState({ loading: false, value: null, error })
+      );
+
+    return () => {
+      canceled = true;
+    };
+  }, deps);
+
+  return state;
+}
+```
+
+Then you can reuse it anywhere:
+
+```jsx
+function UserProfile({ id }) {
+  const {
+    loading,
+    error,
+    value: user,
+  } = useAsync(() => fetch(`/api/users/${id}`).then((r) => r.json()), [id]);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Failed to load user.</p>;
+
+  return <h2>{user.name}</h2>;
+}
+```
+
+✅ `useAsync` cleanly separates data fetching from rendering.
+✅ Each use instance is isolated and declarative.
+✅ Hooks now act as _mini controllers_ inside your component.
+
+---
+
+### **Example 5 — Inversion of Control (Hooks vs. Components)**
+
+Suppose we want a polling feature that repeatedly refetches data every N seconds.
+
+With components, you might try to make a “Polling” wrapper:
+
+```jsx
+function Poller({ interval, fetcher, children }) {
+  const [data, setData] = React.useState(null);
+  React.useEffect(() => {
+    fetcher().then(setData);
+    const id = setInterval(() => fetcher().then(setData), interval);
+    return () => clearInterval(id);
+  }, [fetcher, interval]);
+  return children(data);
+}
+```
+
+Usage:
+
+```jsx
+<Poller
+  interval={5000}
+  fetcher={() => fetch("/api/status").then((r) => r.json())}
+>
+  {(data) => <Status data={data} />}
+</Poller>
+```
+
+This looks clean, but it **forces control upward** — you have to structure your JSX around `<Poller>`.
+If you need multiple polling points, you get wrapper nesting.
+
+Now with a Hook:
+
+```jsx
+function usePoll(fetcher, interval) {
+  const [data, setData] = React.useState(null);
+  React.useEffect(() => {
+    fetcher().then(setData);
+    const id = setInterval(() => fetcher().then(setData), interval);
+    return () => clearInterval(id);
+  }, [fetcher, interval]);
+  return data;
+}
+
+function Status() {
+  const data = usePoll(() => fetch("/api/status").then((r) => r.json()), 5000);
+  return <p>{data ? data.status : "Loading..."}</p>;
+}
+```
+
+Now **the component controls the hook**, not the other way around.
+This is **inversion of control** — hooks don’t own structure; components do.
+This is why Hooks scale better than HOCs or wrappers.
+
+---
+
+### **When to Create a Custom Hook**
+
+✅ Create a custom hook when:
+
+- You repeat the same effect or state logic across components.
+- You want to separate _behavior_ from _presentation_.
+- You want a self-contained lifecycle that composes easily.
+
+❌ Avoid over-abstracting:
+
+- Don’t wrap everything in a custom hook “just because.”
+- Keep logic near where it’s used until it becomes repetitive.
+
+---
+
+### **How Hooks Compose Better than Components**
+
+Hooks compose like pure functions — by _calling each other_, not nesting.
+
+Example:
+
+```jsx
+function useAppState() {
+  const user = useUser();
+  const theme = useTheme();
+  const online = useOnlineStatus();
+  return { user, theme, online };
+}
+
+function AppStatus() {
+  const { user, theme, online } = useAppState();
+  return (
+    <div>
+      {user.name} | {theme} theme | {online ? "Online" : "Offline"}
+    </div>
+  );
+}
+```
+
+Each hook focuses on one concern.
+Composition feels natural — no wrapper, no new hierarchy, no prop juggling.
+
+---
+
+### **Principle / Takeaway**
+
+> **Hooks separate behavior from structure. Components describe “what to show.” Hooks describe “how it behaves.”**
+
+In short:
+
+| Concept       | Responsibility        | Typical Scope                          |
+| ------------- | --------------------- | -------------------------------------- |
+| **Component** | Declares UI layout    | “What does this screen look like?”     |
+| **Hook**      | Encapsulates behavior | “How does this screen act or respond?” |
+
+Hooks allow:
+
+- **Logic reuse without wrapper components.**
+- **Composition of behaviors like pure functions.**
+- **Inversion of control:** components pull in logic, not receive it.
+
+They complete React’s vision of _functions as the fundamental unit of reuse_.
+
+---
+
+Next, we’ll move to **Lesson 16 — Performance Patterns: Memoization, Batching, and Avoiding Wasted Renders**,
+where we’ll tie together concurrency, transitions, and hooks to learn _how React optimizes updates_ and _how to help it do less work without breaking purity._
+
+Would you like to continue to Lesson 16?

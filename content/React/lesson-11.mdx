@@ -1,0 +1,316 @@
+---
+id: CF-2112
+title: Lesson 11 Transitions Coordinating Urgent and Non Urgent Work
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T19:05:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - Transitions
+  - useTransition
+  - Concurrent Rendering
+  - Scheduler Priorities
+  - UI Responsiveness
+  - Interruptible Updates
+  - Suspense Integration
+  - Frontend Architecture
+links:
+  - label: Lesson Ten
+    href: lesson-ten.mdx
+summary: Explains how React transitions allow developers to label updates as urgent or non-urgent, enabling the scheduler to keep interactions responsive while expensive work runs interruptibly in the background.
+---
+
+# **Lesson 11 — Transitions: Coordinating Urgent and Non-Urgent Work**
+
+---
+
+### **Context / Motivation**
+
+In the previous lesson, we saw how concurrent rendering lets React **pause, resume, or discard** work to keep the UI responsive.
+
+But sometimes the _type of work_ matters more than just its cost.
+For example:
+
+- Typing in a search box should feel instant.
+- But filtering a large list based on that input might take hundreds of milliseconds.
+
+Before React 18, both were treated as equally urgent.
+So typing felt _laggy_, because React had to re-render the filtered list **before** the input could update.
+
+React’s answer was to give developers control over _priority_ — the ability to say:
+
+> “This update is urgent (keep it fast).”
+> “This other update is non-urgent (can wait a moment).”
+
+That control lives in the **Transition API**.
+
+---
+
+### **The Problem: Competing Updates**
+
+Consider this simple component:
+
+```jsx
+function Search() {
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState([]);
+
+  function handleChange(e) {
+    const value = e.target.value;
+    setQuery(value);
+    setResults(filterBigList(value)); // expensive
+  }
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      <List items={results} />
+    </>
+  );
+}
+```
+
+When you type, React:
+
+1. Updates the input value (`setQuery`).
+2. Re-renders the filtered list (`setResults`).
+
+But both updates happen together, synchronously, blocking the main thread.
+So you feel lag between keypress and visible input.
+
+---
+
+### **The Insight: Different Updates, Different Urgencies**
+
+Not all updates are equal.
+
+- **Urgent:** things that affect direct interaction feedback — typing, clicking, dragging.
+- **Non-urgent:** expensive or secondary updates — filtering, animations, background data, etc.
+
+React 18 introduces the ability to **label updates** so the scheduler can prioritize accordingly.
+
+---
+
+### **The Solution: `useTransition`**
+
+`useTransition` is a Hook that gives you two things:
+
+1. `isPending` — a boolean indicating if a transition is in progress.
+2. `startTransition()` — a function to _wrap_ updates that should be treated as non-urgent.
+
+Example:
+
+```jsx
+import { useTransition } from "react";
+
+function Search() {
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState([]);
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(e) {
+    const value = e.target.value;
+    setQuery(value); // urgent update: input stays responsive
+
+    startTransition(() => {
+      setResults(filterBigList(value)); // non-urgent background work
+    });
+  }
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      {isPending && <Spinner />}
+      <List items={results} />
+    </>
+  );
+}
+```
+
+---
+
+### **What Happens Under the Hood**
+
+Let’s trace it step by step:
+
+1. User types → triggers `handleChange`.
+2. `setQuery(value)` runs normally — **urgent**, updates the text field immediately.
+3. React begins rendering the new `results` list in the background (low priority).
+4. The browser stays free to handle more input.
+5. Once the background render finishes, React commits it.
+6. `isPending` flips from `true → false`, hiding the spinner.
+
+Now typing feels smooth even if filtering is heavy.
+
+---
+
+### **Why It Works**
+
+React’s scheduler now knows:
+
+- Urgent updates must commit ASAP.
+- Transition updates can be paused or aborted if newer ones come in.
+
+That means:
+
+- If the user types quickly (`a → ap → app → appl`), React may _skip_ rendering intermediate filtered lists.
+- It will only commit the latest one (“apple”).
+- CPU time isn’t wasted, and the UI never feels blocked.
+
+---
+
+### **What Transitions Are Not**
+
+- They are _not_ parallel threads.
+- They don’t defer work indefinitely — they just mark it as interruptible.
+- They are _not_ the same as `useDeferredValue` (which defers consumption, not production, of state).
+
+---
+
+### **Example: Visualizing Priorities**
+
+| Update         | Code                                  | Priority | Behavior                               |
+| -------------- | ------------------------------------- | -------- | -------------------------------------- |
+| Input text     | `setQuery()`                          | High     | Must happen immediately                |
+| List filtering | `startTransition(() => setResults())` | Low      | Can pause or skip intermediate renders |
+| Spinner        | `isPending`                           | High     | Reflects transition state              |
+
+React’s internal scheduler juggles both queues — urgent tasks first, then background ones.
+
+---
+
+### **Comparison with Pre-React 18**
+
+Before concurrency, all updates were synchronous:
+
+```
+Type key → render → filter list → update DOM → browser paints
+```
+
+In React 18 with transitions:
+
+```
+Type key → update input → (React schedules background filter)
+```
+
+→ Input updates immediately
+→ Filtering happens later when the browser is idle
+
+---
+
+### **Under the Hood: Two Queues of Work**
+
+React keeps separate lanes for:
+
+- **Normal updates** (user events, input, state changes)
+- **Transition updates** (background, interruptible)
+
+This is powered by React’s **Fiber architecture** and internal **scheduler**.
+When React runs out of idle time, it yields back to the browser and resumes later — so rendering never blocks input events.
+
+---
+
+### **Example: Combining with Suspense**
+
+Transitions shine when combined with asynchronous data fetching via Suspense.
+
+```jsx
+function SearchPage() {
+  const [query, setQuery] = useState("");
+  const [resource, setResource] = useState(fetchData(""));
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(e) {
+    const value = e.target.value;
+    setQuery(value);
+    startTransition(() => {
+      setResource(fetchData(value)); // async fetch in background
+    });
+  }
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      {isPending && <Spinner />}
+      <Suspense fallback={<Spinner />}>
+        <Results resource={resource} />
+      </Suspense>
+    </>
+  );
+}
+```
+
+Here, React starts fetching new data in a transition, allowing:
+
+- Immediate text input update
+- Deferred async re-render once data arrives
+- Smooth loading states without jank
+
+---
+
+### **`useTransition` vs `useDeferredValue`**
+
+These are often confused.
+Here’s the difference:
+
+| Hook                   | Defers what?            | Used where?                           | Example                                            |
+| ---------------------- | ----------------------- | ------------------------------------- | -------------------------------------------------- |
+| **`useTransition`**    | The _update itself_     | When you control the update           | Wrapping `setResults()`                            |
+| **`useDeferredValue`** | The _value consumption_ | When you receive a fast-changing prop | Deriving `deferredQuery = useDeferredValue(query)` |
+
+`useTransition` controls _when_ React starts work.
+`useDeferredValue` controls _when_ a component uses a value.
+
+---
+
+### **When to Use Transitions**
+
+✅ Use when:
+
+- You have updates that take noticeably longer than input events.
+- You want to show a “pending” state while background work happens.
+- You want to keep the UI responsive during heavy computation or fetching.
+
+❌ Don’t use for:
+
+- Urgent feedback (typing, clicking, toggling visibility).
+- Micro-updates that are already fast.
+
+---
+
+### **Evolution / Refinement**
+
+- Before React 18: no concept of priority — all updates blocked.
+- React 18: transitions built atop the concurrent renderer.
+- Future versions: deeper integration with async fetching (React Server Components, Suspense streaming).
+
+Transitions are part of React’s **“time slicing”** vision — enabling seamless interleaving of multiple flows of work.
+
+---
+
+### **Principle / Takeaway**
+
+> **Transitions let you separate urgent and non-urgent work so React can prioritize intelligently.**
+> They don’t make rendering faster — they make _interaction smoother_ by keeping urgent work responsive.
+
+In short:
+
+```
+setState → urgent, immediate
+startTransition → non-urgent, interruptible
+```
+
+React can now balance responsiveness and completeness, maintaining 60 FPS feel even in complex apps.
+
+---
+
+Next, we’ll move to **Lesson 12 — Suspense: Declarative Loading States**,
+where we’ll explore how React uses Suspense boundaries to pause rendering until asynchronous data is ready, and how it integrates beautifully with transitions.
+Would you like to continue to Lesson 12?

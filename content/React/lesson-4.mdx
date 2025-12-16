@@ -1,0 +1,302 @@
+---
+id: CF-2105
+title: Lesson 4 Hooks Functions That Remember
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T16:45:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - Hooks
+  - Declarative Memory
+  - Side Effects
+  - Component Lifecycle
+  - Logic Reuse
+  - Functional Components
+  - Concurrent Rendering Foundations
+  - Frontend Architecture
+links:
+  - label: Lesson Three
+    href: lesson-three.mdx
+summary: Explains why Hooks were introduced as a structural correction to class components, showing how functions can remember state, manage side effects, and share logic while preserving React’s declarative and deterministic model.
+---
+
+# **Lesson 4 — Hooks: Functions That Remember**
+
+---
+
+### **Context / Motivation**
+
+By Lesson 3, we saw that React components can _remember_ state using `useState`.
+But that was just one kind of memory — React components also need to:
+
+- Perform **side effects** (fetch data, subscribe to events, manipulate DOM)
+- **Share logic** between components
+- **React** to changes in props or state over time
+
+In older versions of React, all of this was handled using **class components** and **lifecycle methods** like `componentDidMount`, `componentDidUpdate`, and `componentWillUnmount`.
+
+That approach worked, but over time it revealed deep problems.
+Hooks were invented not as syntactic sugar, but as a **structural correction** to those problems.
+
+---
+
+### **The Problem: Stateful Logic in Class Components**
+
+Here’s what a class-based counter looked like:
+
+```jsx
+class Counter extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { count: 0 };
+  }
+
+  increment = () => {
+    this.setState({ count: this.state.count + 1 });
+  };
+
+  componentDidMount() {
+    document.title = `Count: ${this.state.count}`;
+  }
+
+  componentDidUpdate() {
+    document.title = `Count: ${this.state.count}`;
+  }
+
+  render() {
+    return <button onClick={this.increment}>Count: {this.state.count}</button>;
+  }
+}
+```
+
+At first glance, this seems fine — it even works.
+But as apps grew, three pain points became impossible to ignore.
+
+---
+
+### **1. Logic Scattered Across Lifecycles**
+
+Suppose you want to add a data-fetching behavior when a component mounts, and cleanup when it unmounts.
+
+You’d split that logic across _three separate methods_:
+
+```jsx
+componentDidMount() {
+  fetchUser();
+}
+
+componentDidUpdate(prevProps) {
+  if (prevProps.id !== this.props.id) {
+    fetchUser();
+  }
+}
+
+componentWillUnmount() {
+  cancelRequest();
+}
+```
+
+All of this logic is **related** — it’s one conceptual unit (“fetch data when ID changes”) — yet it’s **split across different places** in the class.
+
+The code’s structure no longer reflects the logic’s structure.
+You had to _mentally reconstruct_ the component’s behavior every time you read it.
+
+---
+
+### **2. No Good Way to Share Stateful Logic**
+
+If two components both needed to fetch data, you had to:
+
+- Copy the code (duplication), or
+- Wrap one component inside another (higher-order components), or
+- Use render props (which nested components deeply)
+
+Each workaround added complexity.
+React needed a composable, function-based way to share behavior.
+
+---
+
+### **3. This Binding and Context Confusion**
+
+Because class methods are not automatically bound to instances, you constantly wrote boilerplate like:
+
+```js
+this.handleClick = this.handleClick.bind(this);
+```
+
+Or you’d accidentally reference `this` before it’s initialized.
+
+The conceptual model was broken:
+React was based on **pure rendering functions**, but classes forced an **object-oriented shape** around them.
+
+---
+
+### **The Hook Revolution**
+
+Hooks solved all three problems by giving function components _controlled, declarative memory and lifecycle access._
+
+They let functions **hook into React’s internal system** — the “fiber” — to remember data, perform effects, and respond to time, _without classes._
+
+Let’s rewrite our counter using Hooks:
+
+```jsx
+function Counter() {
+  const [count, setCount] = React.useState(0);
+
+  React.useEffect(() => {
+    document.title = `Count: ${count}`;
+  });
+
+  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
+}
+```
+
+This does the same thing as the class version but is:
+
+- **Smaller**
+- **Easier to reason about**
+- **Encapsulated in one place**
+
+All logic related to “the count” lives _inside the same function_.
+
+---
+
+### **How Hooks Work Conceptually**
+
+Hooks are **bindings between a function and React’s internal timeline**.
+
+When React renders your component, it walks through the Hooks _in order_:
+
+1. `useState(0)` → allocates one memory cell for count.
+2. `useEffect(callback)` → registers a side effect tied to this component instance.
+
+On re-render, React revisits the same sequence of Hooks, matching them by their **call order**, not by name or variable.
+
+That’s why React enforces the **Rules of Hooks**:
+
+1. Only call Hooks at the top level of a component.
+2. Never call them inside loops, conditions, or nested functions.
+
+React needs the sequence of Hook calls to remain consistent across renders — this is how it matches each memory cell to the right line of code.
+
+---
+
+### **Example: Hooks as Timeline Anchors**
+
+```jsx
+function Example() {
+  const [count, setCount] = React.useState(0);
+  const [name, setName] = React.useState("Nasser");
+
+  React.useEffect(() => {
+    console.log(`Rendered for ${name} with count ${count}`);
+  });
+}
+```
+
+React’s internal timeline for this component might look like:
+
+| Hook Index | Hook Type | Stored Value |
+| ---------- | --------- | ------------ |
+| 0          | useState  | 0            |
+| 1          | useState  | "Nasser"     |
+| 2          | useEffect | callback     |
+
+Each render, React runs these hooks in the same order to update or reuse their stored values.
+
+---
+
+### **The Unification: Classes → Functions That Remember**
+
+Before Hooks:
+
+- Stateless function components: pure but forgetful.
+- Class components: stateful but verbose and scattered.
+
+After Hooks:
+
+- Function components can _remember_ (`useState`), _react_ (`useEffect`), _memoize_ (`useMemo`), _reference_ (`useRef`), and _share logic_ (`custom hooks`).
+
+React’s design philosophy became clearer:
+
+> “UI should be described as pure functions of state, but those functions must be able to remember and react to time.”
+
+Hooks gave React a **unified mental model**.
+
+---
+
+### **Example: Extracting Reusable Stateful Logic**
+
+Before Hooks, if two components needed the same “fetch user” logic, you’d duplicate or nest.
+
+With Hooks, you can extract it:
+
+```jsx
+function useUser(id) {
+  const [user, setUser] = React.useState(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/users/${id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setUser(data);
+      });
+    return () => (cancelled = true);
+  }, [id]);
+
+  return user;
+}
+
+function Profile({ id }) {
+  const user = useUser(id);
+  if (!user) return <p>Loading...</p>;
+  return <h2>{user.name}</h2>;
+}
+```
+
+Now, both `Profile` and `Dashboard` can reuse `useUser()`.
+Hooks make logic **first-class citizens**, not just components.
+
+---
+
+### **Evolution / Refinement**
+
+Hooks first appeared in React 16.8.
+At the time, they seemed like a new syntax feature — but in truth, they were the first step toward **concurrent rendering**.
+
+Why?
+
+Because React now fully controls when and how your function runs.
+Hooks let React pause, resume, or replay your component without losing state, since React owns the timeline.
+
+That ownership enables concurrency, transitions, and Suspense — all built on the same abstraction: _functions that remember._
+
+---
+
+### **Principle / Takeaway**
+
+> **Hooks make functions stateful while staying pure from React’s point of view.**
+> They let React control when your component runs while you control _what it remembers and reacts to._
+
+Hooks unify:
+
+```
+state + side-effects + lifecycle + reusability
+```
+
+into one model:
+**Functions that remember across time.**
+
+---
+
+Next, we’ll move to **Lesson 5 — Keeping Purity in a Concurrent World**, where we’ll see how React’s new concurrent architecture forced a stricter notion of “purity,” and how impure code (like calling `setState` inside render) breaks when rendering becomes interruptible.
+
+Would you like to continue to Lesson 5?

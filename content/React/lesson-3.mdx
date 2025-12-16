@@ -1,0 +1,287 @@
+---
+id: CF-2104
+title: Lesson 3 State Remembering Across Renders
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T16:30:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - State Management
+  - Declarative Memory
+  - Hooks Fundamentals
+  - Functional Components
+  - Deterministic Rendering
+  - Unidirectional Data Flow
+  - Reactive Programming
+  - Frontend Foundations
+links:
+  - label: Lesson Two
+    href: lesson-two.mdx
+summary: Introduces state as declarative memory that allows React components to remember values across renders while preserving purity, enabling predictable updates and scalable UI reasoning.
+---
+
+# **Lesson 3 — State: Remembering Across Renders**
+
+---
+
+### **Context / Motivation**
+
+In the last lesson, we learned that React components are _pure descriptions_ — functions that, given props, describe a piece of UI.
+
+But there’s an obvious limitation:
+
+> If a component is just a pure function, how does it remember anything between renders?
+
+Imagine a counter app again:
+
+```jsx
+function Counter() {
+  let count = 0;
+
+  function handleClick() {
+    count = count + 1;
+    console.log(count);
+  }
+
+  return <button onClick={handleClick}>Count: {count}</button>;
+}
+```
+
+You might expect the count to go up each time you click — but it doesn’t.
+React re-runs `Counter()` from scratch on every render, so `count` is reset to `0` each time.
+
+This is the problem of **ephemeral local variables**: they don’t persist across renders.
+
+React needed a way for components to **remember data between renders** while staying _pure_ — without turning components into mutable objects.
+
+That’s what **state** was invented for.
+
+---
+
+### **The Problem: Remembering Without Breaking Purity**
+
+The naive fix would be to use a global variable:
+
+```jsx
+let count = 0;
+
+function Counter() {
+  function handleClick() {
+    count++;
+    console.log(count);
+  }
+  return <button onClick={handleClick}>Count: {count}</button>;
+}
+```
+
+This “works” — but now _every_ instance of `Counter` shares the same `count`.
+We’ve broken **encapsulation**.
+The UI is no longer a deterministic function of its own data — it depends on external mutable state.
+
+React needed a way for each component instance to _keep its own memory_, managed by React itself.
+
+---
+
+### **The Solution: State as Component Memory**
+
+React introduced the concept of **state** — a way to tell React:
+
+> “Please remember this value for me between renders.”
+
+When you call `useState`, you’re saying:
+
+- “Here’s the initial value.”
+- “If it changes, re-render this component with the new value.”
+
+Let’s rewrite the counter using React’s state:
+
+```jsx
+function Counter() {
+  const [count, setCount] = React.useState(0);
+
+  function handleClick() {
+    setCount(count + 1);
+  }
+
+  return <button onClick={handleClick}>Count: {count}</button>;
+}
+```
+
+Now, when you click:
+
+1. React calls `setCount(count + 1)`.
+2. React _schedules_ a re-render.
+3. On the next render, `useState(0)` returns `[newValue, setValue]` → `[1, setCount]`.
+4. The UI updates automatically.
+
+Each component instance gets its _own_ isolated memory cell.
+
+---
+
+### **Under the Hood (Conceptually)**
+
+Internally, React keeps a **timeline of state values** for each component instance.
+
+You can visualize it like this:
+
+| Render # | Value of `count` | JSX Output |
+| -------- | ---------------- | ---------- |
+| 1        | 0                | `Count: 0` |
+| 2        | 1                | `Count: 1` |
+| 3        | 2                | `Count: 2` |
+
+React stores these values in order of `useState` calls — that’s why **Hooks must always be called in the same order**.
+They’re indexed by position, not by name.
+
+If you break that rule, React’s timeline gets misaligned — we’ll see why in a later lesson about the “Rules of Hooks.”
+
+---
+
+### **Example: Multiple State Variables**
+
+You can remember more than one thing:
+
+```jsx
+function Form() {
+  const [name, setName] = React.useState("");
+  const [age, setAge] = React.useState(0);
+
+  return (
+    <div>
+      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <input
+        type="number"
+        value={age}
+        onChange={(e) => setAge(Number(e.target.value))}
+      />
+      <p>
+        Hello {name}, age {age}
+      </p>
+    </div>
+  );
+}
+```
+
+Each call to `useState` adds one new memory slot in the component’s internal timeline.
+
+The function is pure from React’s perspective:
+Every render still just returns a description — the _remembering_ happens outside, managed by React.
+
+---
+
+### **The Key Idea: Declarative Memory**
+
+Before React:
+
+- UI and data were mutable and scattered.
+- You had to imperatively sync “what you see” with “what you know.”
+
+With state:
+
+- React owns the timeline.
+- You declare the _current_ state, and React ensures the UI always matches it.
+
+Instead of mutating the UI directly, you mutate the **state**, and React updates the UI _for you._
+
+This is the heart of the **reactive programming model**:
+
+```
+Render(View) = f(State)
+```
+
+Whenever `State` changes, React re-runs the render function to recompute the `View`.
+
+---
+
+### **State vs. Derived Values**
+
+Sometimes a value can be computed from existing state and props.
+Those shouldn’t be stored with `useState` — they should be **derived**.
+
+For example:
+
+```jsx
+function Temperature({ celsius }) {
+  const fahrenheit = (celsius * 9) / 5 + 32; // derived
+  return <p>{fahrenheit}°F</p>;
+}
+```
+
+If you stored `fahrenheit` as state, it could get out of sync.
+State is for data that _changes over time_, not data that _can be computed from other data._
+
+---
+
+### **Common Pitfall: Stale State in Closures**
+
+Because React re-runs the component each render, event handlers can sometimes “close over” old state values.
+
+For example:
+
+```jsx
+function Counter() {
+  const [count, setCount] = React.useState(0);
+
+  function incrementLater() {
+    setTimeout(() => {
+      setCount(count + 1); // ❌ uses stale 'count'
+    }, 1000);
+  }
+
+  return <button onClick={incrementLater}>Count: {count}</button>;
+}
+```
+
+If you click multiple times fast, only the first scheduled update works — later callbacks reference outdated `count` values.
+
+**Fix:** use the functional updater form:
+
+```jsx
+setCount((prev) => prev + 1);
+```
+
+This form always uses the latest state, avoiding closure staleness.
+
+---
+
+### **Evolution / Refinement**
+
+Originally, React had two ways of remembering:
+
+- Class components used `this.state` and `this.setState()`.
+- Function components were stateless.
+
+Hooks unified both under one model:
+**functions that can remember.**
+
+Now every component can be a _pure function with declarative memory_.
+
+This design made React’s future — concurrent rendering, transitions, suspense — possible, because React fully controls when and how to re-render without losing your component’s memory.
+
+---
+
+### **Principle / Takeaway**
+
+> **State is declarative memory.**
+> It lets React components remember values between renders while remaining pure functions from React’s perspective.
+
+You never store _what the UI looks like_ — you store _what the data is_, and React computes the UI.
+
+The flow now looks like:
+
+```
+(State, Props) → Component → JSX (UI description)
+```
+
+This foundation enables everything else — effects, memoization, concurrency — because React can always reconstruct the UI from pure data.
+
+---
+
+Next, we’ll move to **Lesson 4 — Hooks: Functions That Remember**, where we’ll see _why_ React moved away from classes, _how_ Hooks generalized the concept of component memory, and _what_ that changed about the way we reason about UI lifecycles. Would you like me to begin Lesson 4?

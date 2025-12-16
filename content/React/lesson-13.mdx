@@ -1,0 +1,325 @@
+---
+id: CF-2114
+title: Lesson 13 Error Boundaries Containing Failures
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T19:50:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - Error Boundaries
+  - Fault Isolation
+  - Runtime Errors
+  - Suspense Integration
+  - Resilience Patterns
+  - UI Recovery
+  - Concurrent Rendering
+  - Frontend Architecture
+links:
+  - label: Lesson Twelve
+    href: lesson-twelve.mdx
+summary: Explains how React error boundaries contain render-time failures, isolate crashing subtrees, and work alongside Suspense to provide resilient, recoverable UIs in concurrent applications.
+---
+
+# **Lesson 13 — Error Boundaries: Containing Failures**
+
+---
+
+### **Context / Motivation**
+
+In the previous lesson, we saw how **Suspense** lets React _pause rendering_ while data or code loads, and show a fallback UI until things are ready.
+But what happens when something goes wrong?
+
+For example:
+
+- A network request fails,
+- A lazy-loaded component throws an error,
+- A child component accidentally accesses `undefined`,
+- A bug causes an exception mid-render.
+
+By default, **an uncaught error in any component breaks the entire React tree.**
+React needs a way to _recover gracefully_ — show a localized error message, keep the rest of the app running, and avoid a blank screen.
+
+That’s what **Error Boundaries** are for.
+
+---
+
+### **The Problem: A Single Error Can Kill the Whole App**
+
+Before error boundaries, one bad component could take everything down:
+
+```jsx
+function BuggyComponent() {
+  throw new Error("Something went wrong");
+}
+
+function App() {
+  return (
+    <>
+      <Header />
+      <BuggyComponent /> {/* 💥 breaks entire tree */}
+      <Footer />
+    </>
+  );
+}
+```
+
+Without error boundaries, React unmounts the entire app and logs the error to the console.
+Users see a blank page.
+
+React needed a **mechanism to catch and isolate** errors _within_ the component tree.
+
+---
+
+### **The Solution: Error Boundaries**
+
+> An _error boundary_ is a React component that catches JavaScript errors anywhere in its child tree, logs them, and displays a fallback UI instead of crashing the entire app.
+
+They work _like `try/catch`, but for components._
+
+You typically use them to wrap parts of your UI that may fail — such as asynchronous code, third-party widgets, or experimental features.
+
+---
+
+### **How to Create an Error Boundary**
+
+Error boundaries **must be class components** (as of React 18).
+You can write your own:
+
+```jsx
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so next render shows fallback UI
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    // Log error or send to monitoring service
+    console.error("Error caught:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || <h2>Something went wrong.</h2>;
+    }
+    return this.props.children;
+  }
+}
+```
+
+Then use it like this:
+
+```jsx
+<ErrorBoundary fallback={<p>Could not load profile.</p>}>
+  <UserProfile />
+</ErrorBoundary>
+```
+
+If `UserProfile` (or anything inside it) throws an error during **render, commit, or lifecycle**,
+React catches it and shows the fallback UI instead of crashing the entire app.
+
+---
+
+### **What It Catches**
+
+✅ Error boundaries catch errors during:
+
+- Rendering (`throw new Error()`)
+- Lifecycle methods (`componentDidMount`, `useEffect`, etc.)
+- Lazy loading failures
+- Suspense data loading rejections
+
+❌ They **do not** catch:
+
+- Event handler errors (you can catch those manually with try/catch)
+- Asynchronous errors not tied to rendering (e.g., inside `setTimeout`)
+- Server-side errors during SSR
+
+---
+
+### **Example: Combine with Suspense**
+
+Suspense catches _promises_ (loading states).
+Error boundaries catch _errors_ (failures).
+
+They’re often used together:
+
+```jsx
+<ErrorBoundary fallback={<ErrorMessage />}>
+  <Suspense fallback={<Spinner />}>
+    <UserProfile userId={1} />
+  </Suspense>
+</ErrorBoundary>
+```
+
+This handles both:
+
+- Data still loading → show `<Spinner />`
+- Data fetch failed → show `<ErrorMessage />`
+
+React internally treats Suspense and ErrorBoundary similarly — both are _boundaries in the tree_ where it can pause or recover.
+
+---
+
+### **Example: Scoped Error Boundaries**
+
+You can wrap different sections independently:
+
+```jsx
+function App() {
+  return (
+    <div>
+      <ErrorBoundary fallback={<p>Header crashed</p>}>
+        <Header />
+      </ErrorBoundary>
+
+      <ErrorBoundary fallback={<p>Dashboard failed</p>}>
+        <Dashboard />
+      </ErrorBoundary>
+
+      <Footer />
+    </div>
+  );
+}
+```
+
+If one section crashes, others remain intact.
+This creates _fault isolation_, similar to microservices in UI form.
+
+---
+
+### **Example: Logging Errors to Monitoring**
+
+You can send captured errors to monitoring tools like Sentry or LogRocket:
+
+```jsx
+componentDidCatch(error, info) {
+  logErrorToService({
+    message: error.message,
+    stack: error.stack,
+    componentStack: info.componentStack
+  });
+}
+```
+
+This gives you visibility into user-side failures without breaking their experience.
+
+---
+
+### **Example: Using 3rd Party Helpers**
+
+Most teams don’t re-write this logic manually.
+Popular patterns include:
+
+```jsx
+import { ErrorBoundary } from "react-error-boundary";
+
+<ErrorBoundary
+  fallbackRender={({ error, resetErrorBoundary }) => (
+    <div>
+      <p>{error.message}</p>
+      <button onClick={resetErrorBoundary}>Try again</button>
+    </div>
+  )}
+>
+  <MyComponent />
+</ErrorBoundary>;
+```
+
+The [`react-error-boundary`](https://github.com/bvaughn/react-error-boundary) package by React core team members simplifies retrying, resetting, and state recovery.
+
+---
+
+### **Lifecycle of an Error Boundary**
+
+| Stage                        | Description                                           |
+| ---------------------------- | ----------------------------------------------------- |
+| **Render**                   | Child throws an error → React skips rendering subtree |
+| **getDerivedStateFromError** | Sets `hasError = true`                                |
+| **Commit phase**             | React renders fallback                                |
+| **componentDidCatch**        | Logs or reports the error                             |
+| **User triggers retry**      | Boundary resets → tries to render children again      |
+
+---
+
+### **Functional Alternative (Future)**
+
+React team is experimenting with **hook-based boundaries**,
+so one day you’ll be able to write:
+
+```jsx
+const [error, resetError] = useErrorBoundary();
+if (error) return <ErrorScreen onRetry={resetError} />;
+```
+
+But as of React 18, _only class-based_ error boundaries actually catch render-time exceptions.
+
+---
+
+### **Common Pattern: Reset on Key Change**
+
+If your boundary should recover when data changes, tie it to a key:
+
+```jsx
+<ErrorBoundary key={userId} fallback={<ErrorMessage />}>
+  <Profile userId={userId} />
+</ErrorBoundary>
+```
+
+When `userId` changes, React remounts the subtree — clearing the error.
+
+---
+
+### **Evolution / Refinement**
+
+| Version  | Milestone                                          |
+| -------- | -------------------------------------------------- |
+| React 16 | Error boundaries introduced (crash isolation)      |
+| React 18 | Integrated with Suspense and concurrent rendering  |
+| Future   | Function-based `useErrorBoundary()` (experimental) |
+
+Error boundaries complete the reliability side of React’s concurrent model —
+they give React _places to recover_ from failures just as Suspense gives it _places to wait_.
+
+---
+
+### **Principle / Takeaway**
+
+> **Suspense handles waiting. Error boundaries handle failing.**
+
+Both are React’s way of saying:
+
+> “Let’s not crash or freeze — let’s degrade gracefully.”
+
+In short:
+
+```
+Suspense → fallback while waiting (Promise)
+ErrorBoundary → fallback while recovering (Error)
+```
+
+Together they give React the ability to:
+
+- Pause for async data
+- Recover from exceptions
+- Keep unaffected UI alive
+
+This is how React achieves **resilience** in a concurrent, async world.
+
+---
+
+Next, we’ll move to **Lesson 14 — React Server Components and Streaming**,
+where we’ll see how React extends Suspense and boundaries to the **server**, letting parts of the UI render asynchronously and stream progressively to the browser.
+
+Would you like to continue to Lesson 14?

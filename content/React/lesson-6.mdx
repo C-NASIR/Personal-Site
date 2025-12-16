@@ -1,0 +1,298 @@
+---
+id: CF-2107
+title: Lesson 6 Effects Talking to the Outside World
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T17:25:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - Effects
+  - Side Effects Management
+  - useEffect
+  - useLayoutEffect
+  - Concurrent Rendering
+  - Render Lifecycle
+  - External Synchronization
+  - Frontend Architecture
+links:
+  - label: Lesson Five
+    href: lesson-five.mdx
+summary: Explains how React isolates side effects using effects, detailing when and why useEffect and useLayoutEffect run, how dependency arrays and cleanup work, and how effects preserve render purity in a concurrent world.
+---
+
+# **Lesson 6 — Effects: Talking to the Outside World**
+
+---
+
+### **Context / Motivation**
+
+In Lesson 5, we saw that React must keep **renders pure**.
+All side effects — things that touch the outside world — are forbidden inside the render phase.
+
+But in real applications, we must still _talk to the world_:
+
+- Fetch data
+- Subscribe to events
+- Write to the console
+- Animate DOM elements
+- Start timers, or clean them up
+
+How can we safely do that without violating React’s purity rules?
+
+That’s where **effects** come in.
+
+---
+
+### **The Problem: Side Effects Inside Renders**
+
+Let’s revisit an impure example:
+
+```jsx
+function Greeting({ name }) {
+  document.title = `Hello, ${name}`; // ❌ impure
+  return <h1>Hello, {name}</h1>;
+}
+```
+
+This works — but breaks under React 18’s concurrent model.
+React might:
+
+- Render this component multiple times before committing,
+- Or discard this render altogether.
+
+That means `document.title` could be updated multiple times _before the user even sees the new UI_, producing flicker or wrong titles.
+
+We need a way to _delay_ such side effects until after React has decided:
+
+> “Yes — this render is real, commit it.”
+
+---
+
+### **The Solution: The Effect System**
+
+React provides two hooks for this purpose:
+
+- `useEffect()` — runs _after_ the browser paints (passive effects)
+- `useLayoutEffect()` — runs _right after_ DOM mutations, _before_ paint (synchronous effects)
+
+The general rule:
+
+> **Render describes the UI. Effects synchronize it with the outside world.**
+
+---
+
+### **Example: Document Title Update**
+
+Let’s fix the impure example properly:
+
+```jsx
+function Greeting({ name }) {
+  React.useEffect(() => {
+    document.title = `Hello, ${name}`;
+  }, [name]); // ✅ runs only when 'name' changes
+
+  return <h1>Hello, {name}</h1>;
+}
+```
+
+Sequence when `name` changes:
+
+1. `setState()` triggers a render (pure).
+2. React commits the new DOM (`<h1>Hello, Nasser</h1>`).
+3. Browser paints the updated UI.
+4. Only then React runs the effect and updates `document.title`.
+
+Thus, the effect always runs **after** the user sees the new UI.
+It reflects the committed result — never a speculative render.
+
+---
+
+### **The Role of Dependency Arrays**
+
+The second argument in `useEffect(fn, deps)` tells React _when_ to re-run the effect.
+
+| Dependency | Meaning                                  |
+| ---------- | ---------------------------------------- |
+| `[]`       | Run once (on mount + cleanup on unmount) |
+| `[a, b]`   | Run when `a` or `b` changes              |
+| _(none)_   | Run after every render (default)         |
+
+React compares the new dependency values to the previous ones after each commit.
+If they differ, the effect re-runs.
+
+This prevents redundant side effects.
+
+---
+
+### **Example: Subscribing and Cleaning Up**
+
+Effects can also return a cleanup function.
+React calls it before running the next effect or before unmounting the component.
+
+```jsx
+function WindowSize() {
+  const [width, setWidth] = React.useState(window.innerWidth);
+
+  React.useEffect(() => {
+    function handleResize() {
+      setWidth(window.innerWidth);
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    }; // ✅ cleanup
+  }, []); // run once
+
+  return <p>Width: {width}px</p>;
+}
+```
+
+This example shows the **full lifecycle of an effect**:
+
+- Runs once after mount
+- Cleans up on unmount
+- Maintains synchronization between component state and an external system (the window)
+
+---
+
+### **The Lifecycle Timeline**
+
+Here’s how `useEffect` fits into React’s internal phases:
+
+| Phase               | Happens               | Description                                                              |
+| ------------------- | --------------------- | ------------------------------------------------------------------------ |
+| **Render Phase**    | After `setState()`    | React calls your component to compute the next UI (pure, no effects yet) |
+| **Commit Phase**    | React mutates the DOM | Browser DOM is updated                                                   |
+| **Paint**           | Browser shows new UI  | User sees updated screen                                                 |
+| **Passive Effects** | After paint           | React runs all `useEffect` callbacks                                     |
+
+So in words:
+
+> “Render, commit, paint — then effects run.”
+
+This guarantees that effects observe _the final UI_, not an intermediate one.
+
+---
+
+### **Example: Why Timing Matters**
+
+Suppose you want to measure the height of a newly rendered element.
+
+If you do it inside `useEffect`, you’ll measure _after_ paint — when the browser has already drawn the new layout.
+
+```jsx
+function Box() {
+  const ref = React.useRef();
+
+  React.useEffect(() => {
+    console.log(ref.current.offsetHeight); // ✅ accurate, after paint
+  });
+
+  return <div ref={ref} style={{ height: 200 }} />;
+}
+```
+
+If you need to measure _before_ the browser paints (to avoid flicker), use `useLayoutEffect`.
+That runs **right after the DOM update but before paint**.
+
+```jsx
+React.useLayoutEffect(() => {
+  console.log(ref.current.offsetHeight); // runs earlier
+});
+```
+
+---
+
+### **Effect Cleanup and Re-run Timing**
+
+React guarantees the following sequence for each re-render:
+
+1. Run cleanup from the **previous effect** (if any).
+2. Run the **new effect**.
+
+This prevents overlapping subscriptions or memory leaks.
+
+Example:
+
+```jsx
+React.useEffect(() => {
+  const id = setInterval(() => console.log("tick"), 1000);
+  return () => clearInterval(id);
+}, []); // ✅ cleaned up on unmount
+```
+
+When the component unmounts (or the dependencies change), the cleanup runs.
+
+---
+
+### **Common Mistake: Using Effects for Derived Values**
+
+Beginners often overuse `useEffect` for computing something derived from props or state:
+
+```jsx
+const [doubled, setDoubled] = React.useState(0);
+
+React.useEffect(() => {
+  setDoubled(count * 2); // ❌ unnecessary effect
+}, [count]);
+```
+
+This creates a redundant render cycle.
+Derived values should be computed directly during render:
+
+```jsx
+const doubled = count * 2; // ✅ pure computation
+```
+
+Only use effects for **interactions with the outside world** — not for internal data flow.
+
+---
+
+### **Evolution / Refinement**
+
+`useEffect` unified what used to be multiple lifecycle methods:
+
+- `componentDidMount`
+- `componentDidUpdate`
+- `componentWillUnmount`
+
+into a single declarative API that expresses _synchronization_, not _timing_.
+
+In the concurrent world:
+
+- Effects are deferred until React _commits_.
+- They can be paused, re-run, or discarded if renders are interrupted.
+- React always ensures cleanup before re-running effects.
+
+This abstraction is key for React’s scheduler to maintain stability while keeping the UI responsive.
+
+---
+
+### **Principle / Takeaway**
+
+> **Effects are how React safely communicates with the outside world.**
+> They run _after_ the UI is committed, allowing you to synchronize React’s declarative state with external systems.
+
+In short:
+
+```
+Render = describe the UI
+Commit = apply to DOM
+Effect = synchronize side effects
+```
+
+By keeping effects separate, React preserves purity, enables concurrency, and ensures side effects reflect only _committed reality_, not speculation.
+
+---
+
+Next, we’ll move to **Lesson 7 — Derived State and Memoization**, where we’ll examine the _performance and stability problems_ caused by re-renders, and how `useMemo` and `useCallback` help React stabilize references without breaking purity.
+
+Would you like to continue to Lesson 7?

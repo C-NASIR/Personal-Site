@@ -1,0 +1,319 @@
+---
+id: CF-2106
+title: Lesson 5 Keeping Purity in a Concurrent World
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T17:05:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - Concurrent Rendering
+  - Render Purity
+  - Side Effects
+  - Functional Programming
+  - Deterministic UI
+  - React 18
+  - Strict Mode
+  - Frontend Architecture
+links:
+  - label: Lesson Four
+    href: lesson-four.mdx
+summary: Explains why render purity became mandatory with React 18 concurrency, showing how impure renders break under interruption and how effects isolate side effects to keep UI deterministic.
+---
+
+# **Lesson 5 — Keeping Purity in a Concurrent World**
+
+---
+
+### **Context / Motivation**
+
+By now, we know what React components _are_:
+pure functions that describe what the UI should look like, given the current state.
+
+But React 18 introduced something that changed the game entirely — **concurrent rendering**.
+
+This new architecture allowed React to:
+
+- Pause work mid-render,
+- Resume it later,
+- Drop it if newer data arrives,
+- And interleave updates to keep the UI responsive.
+
+That flexibility was impossible before — but it also surfaced a subtle and profound truth:
+
+> React components must be **pure** functions of their props and state.
+> Because now, React may run them _multiple times_ — or even _throw away their output_.
+
+Let’s unpack what that means, why it matters, and what breaks when purity is lost.
+
+---
+
+### **What Purity Means in React**
+
+In computer science, a **pure function** has two properties:
+
+1. **No side effects:** calling it doesn’t change anything outside itself.
+2. **Deterministic:** given the same inputs, it always returns the same output.
+
+In React, that means:
+
+```jsx
+function Greeting({ name }) {
+  return <h1>Hello, {name}!</h1>;
+}
+```
+
+This component is pure:
+
+- It doesn’t modify anything external.
+- It always renders the same thing for the same props.
+
+React can safely pause, resume, or re-render it at any time, without worrying about inconsistencies.
+
+---
+
+### **The Problem: Impurity in Concurrent Rendering**
+
+Let’s look at a component that violates purity.
+
+```jsx
+let items = [];
+
+function TodoInput() {
+  const [task, setTask] = React.useState("");
+
+  function handleAdd() {
+    items.push(task); // ❌ external mutation
+    setTask("");
+  }
+
+  return (
+    <div>
+      <input value={task} onChange={(e) => setTask(e.target.value)} />
+      <button onClick={handleAdd}>Add</button>
+    </div>
+  );
+}
+```
+
+At first glance, this seems fine.
+But here’s what happens under concurrent rendering.
+
+React may:
+
+- Start rendering `<TodoInput />`.
+- Pause halfway through.
+- Resume it later.
+- Or abandon the current render and start over with fresh data.
+
+If the component (or its render) mutates external state like `items.push()`, then every extra render duplicates that mutation.
+
+Result: **phantom pushes**, **duplicate items**, or **out-of-sync UIs**.
+
+This wasn’t a problem before React 18, because rendering was synchronous — each render ran once, fully, then committed.
+Now, renders are speculative: they can happen multiple times before React decides which one to commit.
+
+Impure components break under this model.
+
+---
+
+### **The Correct Approach: Keep Renders Pure**
+
+All code that _modifies external state_ or _interacts with the outside world_ (network, DOM, logs, timers) must run **outside render**, typically inside `useEffect`.
+
+Let’s fix our example.
+
+```jsx
+function TodoInput({ onAdd }) {
+  const [task, setTask] = React.useState("");
+
+  function handleAdd() {
+    onAdd(task);
+    setTask("");
+  }
+
+  return (
+    <div>
+      <input value={task} onChange={(e) => setTask(e.target.value)} />
+      <button onClick={handleAdd}>Add</button>
+    </div>
+  );
+}
+
+function TodoApp() {
+  const [items, setItems] = React.useState([]);
+
+  function handleAdd(task) {
+    setItems((prev) => [...prev, task]); // ✅ Pure state update
+  }
+
+  return (
+    <>
+      <TodoInput onAdd={handleAdd} />
+      <ul>
+        {items.map((item, i) => (
+          <li key={i}>{item}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+```
+
+Now:
+
+- Each render is a _pure description_.
+- Mutations happen through React’s state system, which React controls.
+- React can pause or retry rendering safely.
+
+This is **the essence of keeping purity in a concurrent world.**
+
+---
+
+### **Example: Effects That Depend on Render Purity**
+
+Consider this effect:
+
+```jsx
+function Clock() {
+  const [time, setTime] = React.useState(Date.now());
+
+  setInterval(() => setTime(Date.now()), 1000); // ❌ inside render!
+
+  return <p>{new Date(time).toLocaleTimeString()}</p>;
+}
+```
+
+This creates a **new interval every render**, because `setInterval()` runs in render time.
+When React re-renders (which happens often), it piles up thousands of timers.
+
+The fix is simple but conceptually deep:
+
+```jsx
+function Clock() {
+  const [time, setTime] = React.useState(Date.now());
+
+  React.useEffect(() => {
+    const id = setInterval(() => setTime(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []); // ✅ Run once, outside render
+
+  return <p>{new Date(time).toLocaleTimeString()}</p>;
+}
+```
+
+`useEffect` runs _after_ React commits the render to the DOM — a side-effect zone.
+The render itself remains pure.
+
+---
+
+### **Why Purity Became Urgent After React 18**
+
+Before concurrency, you could get away with small impurities because React rendered synchronously — each render happened once, in full.
+
+Now, React’s scheduler can:
+
+- **Interrupt** a render to keep the UI responsive.
+- **Restart** a render with new data.
+- **Rebase** state if newer updates arrive.
+
+If your render mutates global data, React can’t trust your component anymore — it can’t replay it safely.
+
+Purity ensures React can _treat your component as a deterministic function_ of inputs, no matter when or how often it runs.
+
+---
+
+### **Analogy: React as a Time Machine**
+
+Think of React as a system that can “replay” your app at different points in time.
+It may say:
+
+> “Let’s see what the UI would look like if state = X.”
+> “Wait, user clicked again — what if state = Y?”
+> “Discard that first render, keep this one.”
+
+For this to work, each render must be **idempotent** — running it multiple times should produce the same result without side effects.
+
+That’s why React 18 introduced **Strict Mode double-rendering** in development: to help you catch these impurities early.
+
+If your component breaks when rendered twice — it’s not pure.
+
+---
+
+### **Broken Example (Impure)**
+
+```jsx
+function LogRender() {
+  console.log("Rendering...");
+  fetch("/api/data"); // ❌ network request inside render
+  return <p>Data fetched</p>;
+}
+```
+
+This fetches data twice in Strict Mode — once per speculative render — leading to wasted calls and inconsistent state.
+
+---
+
+### **Fixed Example (Pure)**
+
+```jsx
+function LogRender() {
+  React.useEffect(() => {
+    fetch("/api/data");
+  }, []); // ✅ run once after commit
+  return <p>Data fetched</p>;
+}
+```
+
+Now, rendering the component multiple times doesn’t cause side effects.
+The side effect happens _after_ React commits the chosen render.
+
+---
+
+### **Evolution / Refinement**
+
+React’s concurrent model (React 18+) transformed rendering from a one-shot process into a **cooperative scheduling system**.
+
+That meant:
+
+- Components could be re-rendered, paused, replayed, or discarded.
+- React’s runtime became like an _operating system scheduler_ for UI work.
+- Developers had to adopt functional purity to make this reliable.
+
+This philosophical shift set the stage for new APIs like:
+
+- `useTransition` (to distinguish urgent vs. non-urgent updates)
+- `Suspense` (to declaratively pause rendering)
+- And later, **server components** (to make even data fetching pure).
+
+All of these depend on purity.
+
+---
+
+### **Principle / Takeaway**
+
+> **Purity is React’s contract with concurrency.**
+> A render should have no external side effects and be deterministic.
+> That’s what allows React to pause, resume, or replay renders safely.
+
+In formula form:
+
+```
+UI = f(State, Props)
+```
+
+…and `f` must be **pure**.
+
+All non-pure actions — DOM manipulation, data fetching, logging, subscriptions — belong in **effects**, never in the render body.
+
+---
+
+Next, we’ll move to **Lesson 6 — Effects: Talking to the Outside World**, where we’ll examine _how React safely isolates side effects_, why `useEffect` runs _after_ paint, and how dependency arrays and cleanups fit into the purity contract.
+
+Would you like me to begin Lesson 6?

@@ -1,0 +1,322 @@
+---
+id: CF-2110
+title: Lesson 9 Context and Prop Drilling
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T18:25:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - Context API
+  - Prop Drilling
+  - useContext
+  - Dependency Injection
+  - State Propagation
+  - Component Communication
+  - Render Optimization
+  - Frontend Architecture
+links:
+  - label: Lesson Eight
+    href: lesson-eight.mdx
+summary: Explains how React Context eliminates prop drilling by broadcasting shared values through the component tree, detailing when to use context, how it re-renders consumers, and how to structure contexts for clarity and performance.
+---
+
+# **Lesson 9 — Context and Prop Drilling**
+
+---
+
+### **Context / Motivation**
+
+By now, we know that React components communicate via **props** —
+parents pass data _down_ to children, who render accordingly.
+
+This unidirectional flow is simple and predictable.
+But as applications grow, it introduces a new kind of pain.
+
+Imagine a structure like this:
+
+```
+<App>
+  <Header>
+    <UserMenu>
+      <ProfilePicture />
+    </UserMenu>
+  </Header>
+</App>
+```
+
+Suppose you want to show the logged-in user’s name or theme color inside `<ProfilePicture>`.
+The data lives in `<App>`, but `<ProfilePicture>` is four levels deep.
+
+You’d have to pass the same prop through every layer — even components that don’t use it:
+
+```jsx
+<App>
+  <Header user={user}>
+    <UserMenu user={user}>
+      <ProfilePicture user={user} />
+    </UserMenu>
+  </Header>
+</App>
+```
+
+That’s **prop drilling** — the tedious passing of data through intermediate layers that don’t need it.
+
+React’s **Context API** was created to solve this.
+
+---
+
+### **The Problem: Prop Drilling and Its Cost**
+
+Prop drilling doesn’t break functionality, but it does break _clarity_.
+
+- Components become cluttered with unused props.
+- Adding or renaming data requires changes across many files.
+- The dependency graph becomes tangled: every component must “know” what’s being passed through it.
+
+This is especially bad for:
+
+- Themes and styles
+- Authentication/user data
+- Localization
+- App-wide settings
+
+React needed a way to share **global-like data** across the tree,
+_without manually threading props through each layer._
+
+---
+
+### **The Solution: Context**
+
+Context provides a mechanism to make data **available to all components in a subtree**,
+without explicit prop passing.
+
+The pattern has three parts:
+
+1. **Create** a context
+2. **Provide** a value
+3. **Consume** it where needed
+
+---
+
+### **Example: Passing Theme Without Props**
+
+#### Step 1: Create the context
+
+```jsx
+const ThemeContext = React.createContext("light");
+```
+
+`createContext()` returns an object with two components:
+
+- `<ThemeContext.Provider>`
+- `<ThemeContext.Consumer>` (or modern alternative: `useContext`)
+
+#### Step 2: Provide the value
+
+```jsx
+function App() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <Toolbar />
+    </ThemeContext.Provider>
+  );
+}
+```
+
+Now any component inside `<Toolbar>` can access `"dark"` without props.
+
+#### Step 3: Consume it
+
+```jsx
+function Button() {
+  const theme = React.useContext(ThemeContext);
+  return <button className={theme}>Click</button>;
+}
+```
+
+No props passed — yet `Button` knows the theme.
+
+---
+
+### **How Context Works Under the Hood**
+
+React maintains a tree of **context providers** and their values.
+When you call `useContext(SomeContext)`, React looks up the nearest matching provider _above_ in the component tree.
+
+If none is found, it uses the default value from `createContext(defaultValue)`.
+
+When a provider’s `value` changes:
+
+- All components that **consume** that context automatically re-render.
+- React efficiently tracks these dependencies; it doesn’t re-render unrelated parts of the tree.
+
+---
+
+### **Example: Multiple Contexts**
+
+Contexts can be nested, and each subtree sees its nearest value:
+
+```jsx
+function App() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <UserContext.Provider value={{ name: "Nasser" }}>
+        <Page />
+      </UserContext.Provider>
+    </ThemeContext.Provider>
+  );
+}
+
+function Header() {
+  const theme = React.useContext(ThemeContext);
+  const user = React.useContext(UserContext);
+  return <h1 className={theme}>Welcome, {user.name}</h1>;
+}
+```
+
+React automatically links each call to its corresponding provider —
+it’s like _dependency injection for components._
+
+---
+
+### **Using Context Without Over-Rendering**
+
+Context is powerful — but it can cause **performance issues** if overused.
+
+When a context value changes, **all consumers** re-render, even if they don’t care about the specific part of the value that changed.
+
+For example:
+
+```jsx
+const UserContext = React.createContext();
+
+function App() {
+  const [user, setUser] = React.useState({ name: "Nasser", age: 25 });
+  return (
+    <UserContext.Provider value={user}>
+      <Header />
+      <Footer />
+    </UserContext.Provider>
+  );
+}
+```
+
+If only `user.age` changes, both `<Header>` and `<Footer>` re-render, even if `<Header>` only shows `user.name`.
+
+#### Optimization: Split contexts by responsibility
+
+Instead of one large context:
+
+```jsx
+const UserNameContext = React.createContext();
+const UserAgeContext = React.createContext();
+```
+
+Provide each value separately.
+This limits unnecessary re-renders and makes the dependency graph more precise.
+
+---
+
+### **When to Use Context**
+
+✅ **Good for:**
+
+- Global state like themes, locale, auth, routing
+- Data shared across many distant components
+
+❌ **Avoid for:**
+
+- Frequently changing data (like form inputs or counters)
+- Deeply nested but _local_ state (better passed through props)
+- High-frequency updates (prefer libraries like Redux or Zustand)
+
+The Context API isn’t a replacement for state management libraries — it’s a mechanism for **propagation**, not **logic orchestration.**
+
+---
+
+### **Example: Theme Toggle Using Context**
+
+```jsx
+const ThemeContext = React.createContext();
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = React.useState("light");
+  const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
+
+  const value = React.useMemo(() => ({ theme, toggleTheme }), [theme]);
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
+}
+
+function Button() {
+  const { theme, toggleTheme } = React.useContext(ThemeContext);
+  return (
+    <button className={theme} onClick={toggleTheme}>
+      Switch Theme
+    </button>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <Button />
+    </ThemeProvider>
+  );
+}
+```
+
+Here:
+
+- The theme and toggler are provided globally.
+- `useMemo` ensures the context value reference doesn’t change unless the theme itself changes.
+- Only consumers re-render when theme changes.
+
+---
+
+### **Evolution / Refinement**
+
+Originally, React had `contextType` and render-prop-based consumers (`<Context.Consumer>`).
+They worked but were verbose and harder to reason about.
+
+Hooks (`useContext`) simplified the model into:
+
+- No special syntax
+- No nesting hell
+- Direct access to values inside functions
+
+This design aligned context with the “**functions that remember**” principle introduced by hooks.
+
+---
+
+### **Principle / Takeaway**
+
+> **Context replaces prop drilling by allowing data to be shared implicitly across a tree.**
+> It doesn’t replace state management — it replaces _manual wiring_ of props.
+
+In short:
+
+```
+useContext → read from the nearest provider
+Context.Provider → broadcast a value
+Props → still best for local, explicit communication
+```
+
+Context adds reach — but with reach comes responsibility:
+use it for _stable, cross-cutting concerns_, not for every variable.
+
+---
+
+Next, we’ll move to **Lesson 10 — Concurrent Rendering: The Core Architectural Shift**,
+where we’ll explore how React’s new concurrent renderer schedules updates over time —
+allowing React to stay responsive even when the UI work becomes heavy.
+
+Would you like to continue to Lesson 10?

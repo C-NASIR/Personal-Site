@@ -1,0 +1,284 @@
+---
+id: CF-2111
+title: Lesson 10 Concurrent Rendering The Core Architectural Shift
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T18:45:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - Concurrent Rendering
+  - Scheduler
+  - React 18
+  - Transitions
+  - Rendering Model
+  - UI Responsiveness
+  - Interruptible Rendering
+  - Frontend Architecture
+links:
+  - label: Lesson Nine
+    href: lesson-nine.mdx
+summary: Describes React’s shift from synchronous to concurrent rendering, explaining how scheduling, priorities, and interruptible work keep the UI responsive while enabling new primitives like transitions and Suspense.
+---
+
+# **Lesson 10 — Concurrent Rendering: The Core Architectural Shift**
+
+---
+
+### **Context / Motivation**
+
+Up to now, we’ve treated React as a system that:
+
+1. Reacts to state changes.
+2. Re-renders the component tree.
+3. Updates the DOM so the user sees the new UI.
+
+This worked well for years — until applications became complex, asynchronous, and highly interactive.
+
+Before React 18, rendering was **synchronous**: once React started a render, it had to **finish the entire tree** before the browser could do anything else.
+That meant if rendering took too long, the UI _froze_ — scrolls, typing, and animations stuttered.
+
+This led to a fundamental re-architecture: **Concurrent Rendering**.
+
+React’s goal became:
+
+> “Keep the UI responsive by making rendering interruptible, prioritizable, and resumable.”
+
+---
+
+### **The Problem: The Blocking Render Model**
+
+In the old model, React updates worked like this:
+
+```jsx
+setState();          // triggers render
+↓
+Render entire tree   // blocking work
+↓
+Commit DOM changes
+↓
+Browser repaints
+```
+
+If that render took 200 ms, the browser was stuck for 200 ms —
+no scrolling, typing, or event handling.
+
+This was fine for small trees, but disastrous for modern apps with:
+
+- Deep hierarchies
+- Heavy data transformation
+- Animations and real-time updates
+
+The UI became **janky** under load.
+
+---
+
+### **The Core Idea: Work Can Be Interrupted**
+
+React’s concurrent renderer (React 18+) treats rendering as **work that can be paused**.
+
+When you call `setState()`, React schedules that update with a **priority**.
+It may start rendering, but if something more urgent (like user input) arrives, React can:
+
+- Pause the current work.
+- Let the browser handle the input.
+- Resume rendering later from where it left off.
+
+Rendering is now **cooperative** — React yields control back to the browser when needed.
+
+---
+
+### **Render Is Now Like a Draft**
+
+In the concurrent world, React’s render phase is not a “final” update — it’s a _speculative draft._
+
+> “Let’s see what the UI would look like if state = X.”
+
+Only after React finishes and commits does that draft become visible.
+
+If new updates come in before the commit, React can discard the unfinished work and start a new render — like canceling an old draft to focus on the latest one.
+
+---
+
+### **The Scheduler: React’s Internal Conductor**
+
+Under the hood, React 18 introduced a **scheduler** — a lightweight cooperative task system.
+
+Every update has:
+
+- **Priority** (urgent → non-urgent)
+- **Deadline** (how long React can work before yielding)
+- **Interruptibility**
+
+React can break the rendering of large trees into **small units of work** and interleave them with browser tasks.
+
+This is what allows React to stay responsive even during heavy updates.
+
+---
+
+### **Example: Urgent vs. Non-Urgent Work**
+
+Imagine typing into an input that filters a large list.
+
+```jsx
+function Search() {
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState([]);
+
+  function handleChange(e) {
+    setQuery(e.target.value);
+    setResults(filterBigList(e.target.value));
+  }
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      <List items={results} />
+    </>
+  );
+}
+```
+
+Each keystroke triggers both:
+
+- Updating the input text (urgent)
+- Filtering the list (expensive, non-urgent)
+
+In synchronous React, both happen together — leading to **input lag**.
+
+Concurrent React allows separating them.
+
+---
+
+### **Introducing Transitions**
+
+React 18 added a new primitive: **transitions**.
+They let you mark some state updates as “non-urgent,” so React can keep the UI responsive.
+
+```jsx
+import { useTransition } from "react";
+
+function Search() {
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState([]);
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(e) {
+    const value = e.target.value;
+    setQuery(value); // urgent update: text field
+
+    startTransition(() => {
+      setResults(filterBigList(value)); // non-urgent update
+    });
+  }
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      {isPending && <Spinner />}
+      <List items={results} />
+    </>
+  );
+}
+```
+
+Now React prioritizes the input update first,
+then schedules the heavy filtering work _in the background._
+
+The UI stays responsive — you can keep typing even while React is still preparing the next render.
+
+---
+
+### **What Happens Under the Hood**
+
+1. You type → `setQuery()` triggers a **high-priority** render (immediate).
+2. `startTransition()` triggers a **low-priority** render (may be delayed).
+3. React renders the input update right away.
+4. React schedules the expensive filtering work.
+5. Browser stays responsive — user can continue typing or clicking.
+6. Once idle, React finishes the background render and commits it.
+
+---
+
+### **Concurrency Is Not Parallelism**
+
+“Concurrent” doesn’t mean “multithreaded.”
+React still runs on a **single thread**, but it **slices work into chunks** that can yield between browser events.
+
+This cooperative scheduling gives the illusion of multitasking — the UI stays fluid while React quietly finishes rendering in the background.
+
+---
+
+### **Concurrent Rendering and Purity**
+
+Because React may start, pause, resume, or even abandon renders,
+your components must be **pure**.
+
+- Don’t cause side effects during render.
+- Don’t depend on render order.
+- Don’t mutate external variables.
+
+React might render your component multiple times before committing — and only commit once.
+If your component has side effects inside render, those effects could run multiple times, producing inconsistent results.
+
+Purity is what makes concurrency safe.
+
+---
+
+### **The Evolution**
+
+| React Era | Model                    | Drawbacks                     | Solution                                       |
+| --------- | ------------------------ | ----------------------------- | ---------------------------------------------- |
+| ≤ v16     | Synchronous rendering    | UI freezes on heavy updates   | Introduce scheduling                           |
+| v16.8–17  | Partial async groundwork | Hooks, Suspense experiments   | Internal fiber tree refactor                   |
+| v18+      | Concurrent rendering     | Smooth, interruptible updates | Scheduler + transitions + Suspense integration |
+
+React didn’t just add features; it changed the _fundamental model of time_.
+Rendering became a **negotiation between user experience and computational cost.**
+
+---
+
+### **Mental Model: Rendering as Drafting**
+
+React no longer thinks:
+
+> “I render, then commit immediately.”
+
+It thinks:
+
+> “I can prepare several possible UIs and commit the best one once I’m sure.”
+
+That flexibility is what enables new primitives like:
+
+- **`useTransition`** → mark updates as background
+- **`Suspense`** → wait for async data before committing
+- **Streaming SSR** → progressively stream UI from the server
+
+---
+
+### **Principle / Takeaway**
+
+> **Concurrent Rendering makes React interruptible and responsive.**
+> It turns rendering from a blocking task into a cooperative, schedulable process.
+
+In short:
+
+```
+Before: Render → Commit (blocking)
+After:  Schedule → Render (interruptible) → Commit (decided)
+```
+
+React now balances **responsiveness** (urgent updates) with **completeness** (non-urgent updates),
+keeping your app fluid even under load.
+
+---
+
+Next, we’ll move to **Lesson 11 — Transitions: Coordinating Urgent and Non-Urgent Work**,
+where we’ll dive deeper into how `useTransition` and `startTransition` allow React to _gracefully coordinate user interactions_ and _background rendering_ together.
+Would you like to continue to Lesson 11?

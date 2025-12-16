@@ -1,0 +1,296 @@
+---
+id: CF-2108
+title: Lesson 7 Derived State and Memoization
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T17:45:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+tags:
+  - React Core
+  - Derived State
+  - Memoization
+  - useMemo
+  - useCallback
+  - Referential Stability
+  - Performance Optimization
+  - Concurrent Rendering
+  - Frontend Architecture
+links:
+  - label: Lesson Six
+    href: lesson-six.mdx
+summary: Explains derived state and memoization in React, showing how useMemo and useCallback preserve referential stability, prevent wasted work, and enable predictable performance under frequent concurrent re-renders.
+---
+
+# **Lesson 7 — Derived State and Memoization**
+
+---
+
+### **Context / Motivation**
+
+By now, we know how React’s render cycle works:
+
+- Components are pure functions of props and state.
+- Side effects live in `useEffect`.
+- React can re-run renders freely to keep the UI consistent.
+
+But there’s a subtle problem that appears in every real application:
+
+> When React re-renders, it recomputes _everything_ inside your component — even values that didn’t change.
+
+That’s fine most of the time. But if your component performs expensive calculations or creates new function references each render, this can cause **wasted work** or **unnecessary re-renders in child components**.
+
+This is where **derived state** and **memoization** enter the picture.
+
+They don’t make your app “faster” by magic — they make it **stable** by keeping referential equality consistent between renders.
+
+---
+
+### **The Problem: Wasted Work and Unstable References**
+
+Imagine a simple todo app:
+
+```jsx
+function TodoList({ todos, filter }) {
+  const visible = todos.filter((t) => t.completed === filter);
+  return (
+    <ul>
+      {visible.map((t) => (
+        <li key={t.id}>{t.text}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+Every time this component renders — even if `todos` or `filter` haven’t changed —
+React recomputes `todos.filter(...)`.
+
+If the computation is expensive (e.g., sorting, aggregating, or filtering large lists), this becomes wasteful.
+
+Worse: suppose you pass the filtered list down to a memoized child:
+
+```jsx
+<TodoCount items={visible} />
+```
+
+Even if `todos` didn’t change, the **array reference** is new every render — so the child sees it as “changed” and re-renders unnecessarily.
+
+We’re not wasting CPU for no reason — we’re wasting _semantic stability_.
+
+---
+
+### **The Concept: Derived State**
+
+Derived state is any value that can be computed from props or other state, not stored separately.
+
+You can derive it directly during render (pure computation):
+
+```jsx
+const visible = todos.filter((t) => t.completed === filter);
+```
+
+But if that computation is expensive or the resulting value needs referential stability, we can memoize it.
+
+---
+
+### **Memoization: Remembering the Last Result**
+
+React’s `useMemo` lets you _cache_ a computed value across renders —
+but only when its dependencies haven’t changed.
+
+```jsx
+const visible = React.useMemo(() => {
+  return todos.filter((t) => t.completed === filter);
+}, [todos, filter]);
+```
+
+Now, React remembers the result of the last computation.
+If `todos` and `filter` are the same as before, React reuses the previous `visible` array reference.
+
+This prevents:
+
+- Re-running expensive calculations unnecessarily
+- Breaking memoized children that depend on stable references
+
+---
+
+### **Example: Without and With useMemo**
+
+**Without memoization:**
+
+```jsx
+function Chart({ data }) {
+  const transformed = transform(data); // heavy computation
+  return <RenderChart points={transformed} />;
+}
+```
+
+`transform()` runs every render — even if `data` didn’t change.
+
+**With memoization:**
+
+```jsx
+function Chart({ data }) {
+  const transformed = React.useMemo(() => transform(data), [data]);
+  return <RenderChart points={transformed} />;
+}
+```
+
+Now, `transform()` runs _only when data changes_.
+
+---
+
+### **Referential Equality and useCallback**
+
+Another subtle case happens with functions.
+
+In React, every render creates **new function objects** by default:
+
+```jsx
+<button onClick={() => setCount(count + 1)}>Increment</button>
+```
+
+The arrow function `() => setCount(count + 1)` is new on each render.
+If this function is passed as a prop to a child component wrapped in `React.memo()`, that child will still re-render — because the prop reference changed.
+
+`useCallback` solves this by memoizing the function reference:
+
+```jsx
+const increment = React.useCallback(() => {
+  setCount((c) => c + 1);
+}, []); // stable reference
+
+return <Button onClick={increment} />;
+```
+
+Now, the child sees the same function reference between renders —
+React can skip re-rendering the child entirely.
+
+---
+
+### **Example: useMemo and useCallback Together**
+
+```jsx
+function TodoApp({ todos }) {
+  const [filter, setFilter] = React.useState(false);
+
+  const visibleTodos = React.useMemo(
+    () => todos.filter((t) => t.completed === filter),
+    [todos, filter]
+  );
+
+  const toggleFilter = React.useCallback(() => {
+    setFilter((prev) => !prev);
+  }, []);
+
+  return (
+    <>
+      <FilterToggle onToggle={toggleFilter} />
+      <TodoList todos={visibleTodos} />
+    </>
+  );
+}
+```
+
+Here:
+
+- `visibleTodos` is memoized → avoids recomputing or breaking child memoization.
+- `toggleFilter` is stable → avoids re-creating function props each render.
+
+---
+
+### **What Memoization Does _Not_ Do**
+
+Memoization doesn’t make React render less often.
+It just keeps **values stable** between renders, enabling React to _skip_ child re-renders when nothing meaningful changed.
+
+You’re not optimizing React’s frequency of work — you’re optimizing its _stability of meaning._
+
+If you misuse it everywhere, you might even slow your app, since memoization itself has a cost.
+
+Use it when:
+
+- The computation is heavy, **or**
+- The identity of a value (or function) matters to a child.
+
+---
+
+### **Common Mistake: Over-Storing Derived Values**
+
+Sometimes developers store derived data in state unnecessarily:
+
+```jsx
+const [visibleTodos, setVisibleTodos] = useState([]);
+
+useEffect(() => {
+  setVisibleTodos(todos.filter((t) => t.completed));
+}, [todos]);
+```
+
+This duplicates data — `visibleTodos` can always be derived from `todos`.
+This leads to _two sources of truth_, which can get out of sync.
+
+The correct approach:
+
+```jsx
+const visibleTodos = React.useMemo(
+  () => todos.filter((t) => t.completed),
+  [todos]
+);
+```
+
+Derived values belong in `useMemo`, not `useState`.
+
+---
+
+### **Why React Needed Memoization**
+
+React’s rendering model (especially under concurrency) re-renders often and unpredictably.
+The architecture assumes components are **cheap to run**.
+
+But some parts of your tree — heavy calculations, stable callbacks, memoized children — need _referential consistency_ to prevent cascading updates.
+
+Memoization makes those consistent without breaking purity.
+You’re still describing the same UI — you’re just caching intermediate results of pure computations.
+
+---
+
+### **Evolution / Refinement**
+
+Originally, developers tried to control re-renders using `shouldComponentUpdate` in class components.
+It was hard to reason about and prone to errors.
+
+Hooks brought **explicit declarative caching**:
+
+- `useMemo` → cache value
+- `useCallback` → cache function
+- `React.memo` → skip child re-render when props didn’t change
+
+This trio replaces all class-era optimization patterns in a unified, functional way.
+
+---
+
+### **Principle / Takeaway**
+
+> **Memoization preserves referential stability without breaking purity.**
+> It caches the _result_ of pure computations between renders so React can avoid redoing identical work.
+
+In short:
+
+```
+useMemo → remember values
+useCallback → remember functions
+React.memo → remember components
+```
+
+Together, they help React maintain performance and semantic consistency in a world where rendering is frequent and interruptible.
+
+---
+
+Next, we’ll move to **Lesson 8 — Ref and Layout Coordination**, where we’ll look at how React handles _imperative escapes_: accessing DOM nodes, integrating animations, and performing layout reads and writes safely within React’s lifecycle. Would you like to continue to Lesson 8?

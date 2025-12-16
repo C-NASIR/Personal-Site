@@ -1,0 +1,357 @@
+---
+id: CF-2115
+title: Lesson 14 React Server Components and Streaming
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T20:10:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - JSX
+  - Node.js
+  - Next.js
+tags:
+  - React Core
+  - React Server Components
+  - Streaming Rendering
+  - Suspense
+  - Concurrent Rendering
+  - Server Side Rendering
+  - Partial Hydration
+  - Performance Optimization
+  - Frontend Architecture
+links:
+  - label: Lesson Thirteen
+    href: lesson-thirteen.mdx
+summary: Explains React Server Components as an architectural shift that moves data fetching and heavy rendering to the server, using streaming and Suspense to progressively deliver UI while hydrating only interactive client components.
+---
+
+# **Lesson 14 — React Server Components and Streaming**
+
+---
+
+### **Context / Motivation**
+
+Up to now, all our lessons have focused on **React in the browser** — components rendered and hydrated on the client side.
+
+But as apps grew larger, two challenges became unavoidable:
+
+1. **Initial load performance** — users wait for JS bundles before they see meaningful content.
+2. **Data-fetching duplication** — fetching on the server _and_ again on the client leads to extra round-trips and boilerplate.
+
+React’s answer is **React Server Components (RSC)** —
+a new architecture where parts of your component tree render _on the server_ and stream progressively to the client.
+
+This idea was introduced in React 18 and adopted fully by frameworks like **Next.js 13+ (the `app/` directory)**.
+
+---
+
+### **The Problem: All-Client Rendering**
+
+In traditional client-side React:
+
+- The server sends a mostly empty HTML shell.
+- The browser downloads JS.
+- React runs in the browser, fetches data, and builds the UI.
+
+That means:
+
+- Users see a blank page until hydration finishes.
+- You duplicate data-fetching logic between backend and frontend.
+- SEO and time-to-first-byte suffer.
+
+This architecture was powerful for interactivity but inefficient for initial render.
+
+---
+
+### **The Evolution: From SSR → Streaming → Server Components**
+
+Let’s trace the progression.
+
+| Era                             | Model                                                             | Limitation                          |
+| ------------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
+| **Client Rendering**            | All rendering in browser                                          | Slow first paint                    |
+| **Server-Side Rendering (SSR)** | HTML built on server, hydrated later                              | Fast first paint, but double-render |
+| **Streaming SSR**               | Server streams HTML in chunks                                     | Partial improvements                |
+| **Server Components (RSC)**     | Some components run _only_ on server, streamed directly to client | Eliminates hydration duplication    |
+
+Server Components go further than SSR — they’re not just rendered on the server once.
+They are _executed_ on the server every time they need new data, and their output (serialized tree) is streamed to the client for merging with client components.
+
+---
+
+### **The Core Idea**
+
+> **React Server Components let you choose where each component runs:**
+>
+> - **Server Components**: Run only on the server.
+> - **Client Components**: Run (and hydrate) in the browser.
+
+This gives you the best of both worlds:
+
+- Fetch data directly from databases or APIs without bundling that logic to the client.
+- Stream HTML immediately.
+- Only hydrate what’s interactive.
+
+---
+
+### **Server vs. Client Components**
+
+Let’s compare them:
+
+| Aspect                                    | Server Component                                 | Client Component         |
+| ----------------------------------------- | ------------------------------------------------ | ------------------------ |
+| **Runs where**                            | Server (Node, Edge)                              | Browser                  |
+| **Can fetch data?**                       | ✅ Directly (no hooks)                           | ⚠️ Must use APIs / hooks |
+| **Can use hooks?**                        | ❌ No React hooks like `useState` or `useEffect` | ✅ Yes                   |
+| **Bundle size impact**                    | 0 KB (not sent to browser)                       | Adds to JS bundle        |
+| **Can import server-only code (DB, FS)?** | ✅ Yes                                           | ❌ No                    |
+| **Can use event handlers?**               | ❌ No (not interactive)                          | ✅ Yes                   |
+| **When re-run?**                          | On request or revalidation                       | On user interaction      |
+
+---
+
+### **Example 1 — A Simple Server Component**
+
+Imagine a product listing page:
+
+```jsx
+// ProductList.server.jsx
+import db from "@/lib/db"; // direct DB access on the server
+
+export default async function ProductList() {
+  const products = await db.getProducts(); // no fetch needed!
+  return (
+    <ul>
+      {products.map((p) => (
+        <li key={p.id}>{p.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+When React renders this component:
+
+- It executes on the server,
+- Resolves all async data,
+- Streams the final HTML down to the client.
+
+There’s **no bundle cost**, and no extra data-fetching logic on the client.
+
+---
+
+### **Example 2 — Mixing Server and Client Components**
+
+Some parts of your UI need interactivity — those are client components.
+
+```jsx
+// ProductList.server.jsx
+import ProductCard from "./ProductCard.client";
+
+export default async function ProductList() {
+  const products = await fetch("https://api.example.com/products").then((r) =>
+    r.json()
+  );
+  return (
+    <div>
+      {products.map((p) => (
+        <ProductCard key={p.id} product={p} />
+      ))}
+    </div>
+  );
+}
+```
+
+```jsx
+// ProductCard.client.jsx
+"use client"; // 🔑 marks this file as a client component
+
+import { useState } from "react";
+
+export default function ProductCard({ product }) {
+  const [liked, setLiked] = useState(false);
+  return (
+    <div>
+      <h3>{product.name}</h3>
+      <button onClick={() => setLiked(!liked)}>
+        {liked ? "❤️ Liked" : "♡ Like"}
+      </button>
+    </div>
+  );
+}
+```
+
+Here:
+
+- `ProductList` is rendered entirely on the server.
+- Each `ProductCard` is sent as a placeholder that React _hydrates_ later in the browser for interactivity.
+
+Result:
+Fast initial paint (server-rendered list) + minimal JS (only buttons hydrate).
+
+---
+
+### **Example 3 — Streaming in Action**
+
+Server Components can stream data progressively with **Suspense boundaries**:
+
+```jsx
+export default function Page() {
+  return (
+    <>
+      <Header />
+      <Suspense fallback={<p>Loading posts…</p>}>
+        <Posts />
+      </Suspense>
+    </>
+  );
+}
+```
+
+- React starts rendering `<Header>` immediately.
+- `<Posts>` may take time (e.g., fetch large data).
+- React streams the HTML for `<Header>` first, shows fallback for posts, then sends the final `<Posts>` chunk when ready.
+
+The browser **progressively paints** as data arrives — no blank page, no full reload.
+
+---
+
+### **Example 4 — Using RSC in Next.js 13+**
+
+Next.js 13’s `app/` directory uses RSC by default.
+
+```jsx
+// app/page.js (server by default)
+import { Suspense } from "react";
+import Feed from "./Feed";
+import Sidebar from "./Sidebar";
+
+export default function Page() {
+  return (
+    <main>
+      <Suspense fallback={<p>Loading sidebar...</p>}>
+        <Sidebar /> {/* Server component */}
+      </Suspense>
+      <Feed /> {/* Also server by default */}
+    </main>
+  );
+}
+```
+
+If you need interactivity:
+
+```jsx
+// app/components/LikeButton.jsx
+"use client"; // explicitly mark as client
+
+export default function LikeButton() {
+  const [liked, setLiked] = useState(false);
+  return (
+    <button onClick={() => setLiked(!liked)}>
+      ❤️ {liked ? "Liked" : "Like"}
+    </button>
+  );
+}
+```
+
+Next.js automatically splits client vs. server components, streams HTML, and hydrates client parts.
+
+---
+
+### **Why Streaming Matters**
+
+Without streaming, React must:
+
+- Wait for all data to resolve before sending HTML,
+- Meaning longer Time-To-First-Byte (TTFB).
+
+With streaming:
+
+- The browser starts rendering immediately,
+- Each resolved Suspense boundary adds new content progressively,
+- Users see and interact with parts of the page faster.
+
+This creates **time-sliced SSR** — a direct extension of concurrent rendering to the server.
+
+---
+
+### **How Suspense and Error Boundaries Fit In**
+
+On the server:
+
+- **Suspense** boundaries define when to stream partial HTML.
+- **Error boundaries** define where to cut off failing content and show an error fragment instead.
+
+These same primitives work identically across client and server — React simply extends their meaning into streamed output.
+
+---
+
+### **Benefits of React Server Components**
+
+✅ **Performance:**
+
+- Smaller JS bundles (server-only logic not shipped to client).
+- Faster initial render (server can send data and HTML together).
+
+✅ **Developer simplicity:**
+
+- No duplication between “API” and “fetch on client”.
+- No `useEffect` needed for data fetching.
+
+✅ **Scalability:**
+
+- Automatic streaming and partial hydration.
+- Easy composition with Suspense and transitions.
+
+---
+
+### **Caveats**
+
+⚠️ **Limitations:**
+
+- Server Components can’t use stateful or browser-only hooks (`useState`, `useEffect`).
+- Data fetching must be synchronous or promise-based — no side effects during render.
+- Only supported in frameworks that implement RSC runtime (Next.js, Remix experimental).
+
+---
+
+### **Evolution / Refinement**
+
+| Stage     | Innovation                                  |
+| --------- | ------------------------------------------- |
+| React 16  | SSR (server-side render to string)          |
+| React 17  | Streaming SSR (renderToPipeableStream)      |
+| React 18  | Concurrent renderer + Suspense on server    |
+| React 18+ | Server Components architecture (Next.js 13) |
+
+Server Components close the final loop in React’s evolution —
+**rendering, fetching, waiting, and failing** are now unified under one declarative model that spans both client and server.
+
+---
+
+### **Principle / Takeaway**
+
+> **React Server Components move data-fetching and heavy computation to the server, while keeping interactivity on the client — all unified through streaming and Suspense.**
+
+In short:
+
+```
+Client Components → interactivity
+Server Components → data and structure
+Suspense → streaming boundaries
+Error Boundaries → recovery boundaries
+```
+
+React no longer thinks in “client vs. server apps.”
+It now thinks in **layers of responsibility**, each chosen for the most efficient place to run.
+
+---
+
+Next, we’ll move to **Lesson 15 — Hooks Deep Dive: Custom Hooks, Composition, and Inversion of Control**,
+where we’ll return to the client side and learn how hooks scale logic reuse and composability across large applications.
+
+Would you like to continue to Lesson 15?
