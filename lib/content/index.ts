@@ -7,6 +7,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { cache } from "react";
 import { serialize } from "next-mdx-remote/serialize";
+import remarkGfm from "remark-gfm";
 
 import {
   getDirectoryDefinitionById,
@@ -92,7 +93,11 @@ async function readRecordFile(
     `${definition.id}/${fileName}`,
   );
   const frontmatter = data as Record<string, unknown>;
-  const mdx = await serialize(content);
+  const mdx = await serialize(content, {
+    mdxOptions: {
+      remarkPlugins: [remarkGfm],
+    },
+  });
 
   const updatedAt = normalizeDate(
     ensureDateValue(

@@ -1,0 +1,15 @@
+{
+  "label": "Modern React Files",
+  "description": "Module covers everything you need to know in React.",
+  "sortOrder": 40,
+  "dateField": "updatedAt",
+  "requiredFrontmatter": [
+    "id",
+    "title",
+    "classification",
+    "status",
+    "updatedAt",
+    "tags",
+    "summary"
+  ]
+}

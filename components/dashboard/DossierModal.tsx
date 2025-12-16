@@ -56,7 +56,7 @@ export function DossierModal({ record, onClose }: DossierModalProps) {
           </p>
         </header>
 
-        <div className="flex-1 overflow-auto px-6 py-6 text-xl leading-relaxed text-green-100/90">
+        <div className="flex-1 overflow-auto px-6 py-6 text-base leading-relaxed text-green-100">
           <MDXRemote {...record.mdx} components={mdxComponents} />
         </div>
       </div>
