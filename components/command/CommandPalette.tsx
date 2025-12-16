@@ -53,7 +53,7 @@ const NAVIGATION_COMMANDS: CommandItem[] = [
     keywords: ["about", "identity", "profile"],
   },
   ...directories.map((directory) => ({
-    id: `nav-${directory.id}`,
+    id: `nav-directory-${directory.id}`,
     label: `Go to ${directory.label}`,
     route: `/files/${directory.id}`,
     type: "navigation" as const,
