@@ -20,7 +20,7 @@ import { buildSearchIndex } from "@/lib/search/index";
 import { buildPageMetadata } from "@/components/seo/metadata";
 
 interface FileDetailPageProps {
-  params: { directory: string; slug: string };
+  params: Promise<{ directory: string; slug: string }>;
 }
 
 export async function generateStaticParams() {
@@ -40,7 +40,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: FileDetailPageProps): Promise<Metadata> {
-  const { directory, slug } = params;
+  const { directory, slug } = await params;
   if (!isDirectoryId(directory)) {
     return buildPageMetadata({
       title: "Dossier",
@@ -69,7 +69,8 @@ export async function generateMetadata({
 }
 
 export default async function FileDetailPage({ params }: FileDetailPageProps) {
-  const directorySlug = params.directory;
+  const { directory, slug } = await params;
+  const directorySlug = directory;
 
   if (!isDirectoryId(directorySlug)) {
     notFound();
@@ -78,7 +79,7 @@ export default async function FileDetailPage({ params }: FileDetailPageProps) {
   const directoryId = directorySlug as DirectoryId;
   const [directoryCounts, dossier, allRecords] = await Promise.all([
     getDirectoryCounts(),
-    getRecordBySlug(directoryId, params.slug),
+    getRecordBySlug(directoryId, slug),
     getAllRecords(),
   ]);
 

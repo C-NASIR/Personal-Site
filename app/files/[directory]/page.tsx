@@ -15,7 +15,7 @@ import {
 } from "@/lib/directories";
 
 type DirectoryPageProps = {
-  params: { directory: string };
+  params: Promise<{ directory: string }>;
 };
 
 export async function generateStaticParams() {
@@ -25,7 +25,8 @@ export async function generateStaticParams() {
 }
 
 export default async function DirectoryPage({ params }: DirectoryPageProps) {
-  const directorySlug = params.directory;
+  const { directory } = await params;
+  const directorySlug = directory;
 
   if (!isDirectoryId(directorySlug)) {
     notFound();
