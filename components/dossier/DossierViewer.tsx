@@ -34,6 +34,12 @@ export function DossierViewer({ file, directory }: DossierViewerProps) {
           >
             ← Back to {directory.label}
           </Link>
+          <Link
+            className="rounded border border-green-600/60 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-green-100 transition hover:border-green-300 hover:text-green-50 print:hidden"
+            href={`/files/${directory.id}/${file.slug}/reader`}
+          >
+            Open Reader View
+          </Link>
           {file.pdfUrl ? (
             <a
               className="rounded border border-green-500/60 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-green-50 hover:border-green-300 print:hidden"

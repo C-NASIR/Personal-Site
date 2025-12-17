@@ -8,6 +8,7 @@ import matter from "gray-matter";
 import { cache } from "react";
 import { serialize } from "next-mdx-remote/serialize";
 import remarkGfm from "remark-gfm";
+import rehypePrettyCode from "rehype-pretty-code";
 
 import {
   getDirectoryDefinitionById,
@@ -30,6 +31,11 @@ const CLASSIFICATIONS: Classification[] = [
 ];
 
 const STATUSES: FileStatus[] = ["ACTIVE", "ARCHIVED", "DRAFT"];
+
+const prettyCodeOptions = {
+  theme: "github-dark-dimmed",
+  keepBackground: true,
+};
 
 const loadDirectoryRecords = cache(async (directoryId: DirectoryId) => {
   const definition = await getDirectoryDefinitionById(directoryId);
@@ -96,6 +102,7 @@ async function readRecordFile(
   const mdx = await serialize(content, {
     mdxOptions: {
       remarkPlugins: [remarkGfm],
+      rehypePlugins: [[rehypePrettyCode, prettyCodeOptions]],
     },
   });
 
