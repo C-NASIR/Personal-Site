@@ -10,9 +10,16 @@ import { useDirectoryMetadata } from "../providers/DirectoryProvider";
 type SidebarProps = {
   activeDirectory?: DirectoryId;
   counts: Record<DirectoryId, number>;
+  variant?: "desktop" | "mobile";
+  onNavigate?: () => void;
 };
 
-export function Sidebar({ activeDirectory, counts }: SidebarProps) {
+export function Sidebar({
+  activeDirectory,
+  counts,
+  variant = "desktop",
+  onNavigate,
+}: SidebarProps) {
   const pathname = usePathname();
   const { directories, directoryMap } = useDirectoryMetadata();
   const currentDirectory = activeDirectory ?? null;
@@ -21,9 +28,13 @@ export function Sidebar({ activeDirectory, counts }: SidebarProps) {
     { label: "Credentials", href: "/credentials" },
     { label: "Secure Comms", href: "/contact" },
   ];
+  const sidebarClass =
+    variant === "mobile"
+      ? "flex h-full w-full flex-col overflow-y-auto bg-black/95 px-4 py-6 text-sm text-green-100/80"
+      : "hidden h-full w-72 flex-shrink-0 overflow-y-auto border-r border-green-900/40 bg-black/50 px-4 py-6 text-sm text-green-100/80 lg:flex lg:flex-col";
 
   return (
-    <aside className="hidden h-full w-72 flex-shrink-0 overflow-y-auto border-r border-green-900/40 bg-black/50 px-4 py-6 text-sm text-green-100/80 lg:flex lg:flex-col">
+    <aside className={sidebarClass}>
       <p className="text-[0.6rem] uppercase tracking-[0.5em] text-green-500/80">
         Directories
       </p>
@@ -40,6 +51,7 @@ export function Sidebar({ activeDirectory, counts }: SidebarProps) {
                     : "border-green-900/30 bg-black/40 hover:border-green-600/40 hover:text-green-50",
                 )}
                 href={directory.route}
+                onClick={onNavigate}
               >
                 <span className="text-xs font-semibold uppercase tracking-[0.4em]">
                   {directory.label}
@@ -73,6 +85,7 @@ export function Sidebar({ activeDirectory, counts }: SidebarProps) {
                       : "border-green-900/30 bg-black/40 hover:border-green-600/40 hover:text-green-50",
                   )}
                   href={link.href}
+                  onClick={onNavigate}
                 >
                   {link.label}
                 </Link>

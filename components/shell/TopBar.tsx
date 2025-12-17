@@ -9,10 +9,11 @@ export type BreadcrumbItem = {
 };
 
 type TopBarProps = {
-  breadcrumbs: BreadcrumbItem[];
+  breadcrumbs?: BreadcrumbItem[];
+  onToggleSidebar?: () => void;
 };
 
-export function TopBar({ breadcrumbs }: TopBarProps) {
+export function TopBar({ breadcrumbs = [], onToggleSidebar }: TopBarProps) {
   const [clock, setClock] = useState<Date | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const quickNav = [
@@ -39,7 +40,18 @@ export function TopBar({ breadcrumbs }: TopBarProps) {
   return (
     <header className="sticky top-0 z-30 border-b border-green-900/40 bg-black/70 px-6 py-4 text-xs uppercase tracking-[0.35em] text-green-300/80 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <nav className="flex flex-wrap items-center gap-2 text-[0.65rem] tracking-[0.4em]">
+        <div className="flex items-center gap-4">
+          {onToggleSidebar ? (
+            <button
+              className="flex items-center gap-2 rounded border border-green-700/60 bg-black/30 px-3 py-2 text-[0.6rem] uppercase tracking-[0.35em] text-green-200 transition hover:border-green-400 hover:text-green-50 lg:hidden"
+              type="button"
+              onClick={onToggleSidebar}
+            >
+              <span className="text-green-400">☰</span>
+              Access Panel
+            </button>
+          ) : null}
+          <nav className="flex flex-wrap items-center gap-2 text-[0.65rem] tracking-[0.4em]">
           {breadcrumbs.map((item, index) => (
             <span className="flex items-center gap-2" key={item.label}>
               {index > 0 ? (
@@ -59,7 +71,8 @@ export function TopBar({ breadcrumbs }: TopBarProps) {
               )}
             </span>
           ))}
-        </nav>
+          </nav>
+        </div>
 
         <div className="flex flex-wrap items-center justify-end gap-3 text-[0.55rem] tracking-[0.35em] text-green-300">
           {quickNav.map((item) => (

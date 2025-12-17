@@ -5,8 +5,8 @@ import type { SearchDocument } from "@/lib/search/index";
 
 import { CommandPalette } from "../command/CommandPalette";
 import { DirectoryProvider } from "../providers/DirectoryProvider";
-import { Sidebar } from "./Sidebar";
-import { TopBar, type BreadcrumbItem } from "./TopBar";
+import { ShellLayout } from "./ShellLayout";
+import type { BreadcrumbItem } from "./TopBar";
 
 type AppShellProps = {
   directories: DirectoryMeta[];
@@ -31,7 +31,7 @@ export function AppShell({
   const activeDirectoryMeta = activeDirectory
     ? directoryMap[activeDirectory]
     : undefined;
-  const defaultBreadcrumbs: BreadcrumbItem[] =
+  const computedBreadcrumbs: BreadcrumbItem[] =
     breadcrumbs ??
     (activeDirectoryMeta
       ? [
@@ -54,24 +54,13 @@ export function AppShell({
             backgroundSize: "24px 24px",
           }}
         />
-        <div className="relative z-10 flex min-h-screen flex-col lg:h-screen">
-          <a className="skip-link" href="#main-content">
-            Skip to main content
-          </a>
-          <TopBar breadcrumbs={defaultBreadcrumbs} />
-          <div className="flex min-h-0 flex-1 overflow-hidden">
-            <Sidebar
-              activeDirectory={activeDirectory}
-              counts={directoryCounts}
-            />
-            <main
-              className="flex-1 min-h-0 overflow-y-auto border-l border-green-900/30 bg-black/40"
-              id="main-content"
-            >
-              {children}
-            </main>
-          </div>
-        </div>
+        <ShellLayout
+          activeDirectory={activeDirectory}
+          breadcrumbs={computedBreadcrumbs}
+          directoryCounts={directoryCounts}
+        >
+          {children}
+        </ShellLayout>
         {showCommandPalette ? (
           <CommandPalette documents={searchDocuments} />
         ) : null}
