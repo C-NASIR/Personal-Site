@@ -1,0 +1,231 @@
+---
+id: CF-3002
+title: Lesson 2 Understanding the Redux Architecture Store Actions Reducers and View
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T21:20:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - React
+  - JavaScript
+  - Redux
+  - React Redux
+tags:
+  - Redux Core
+  - Store
+  - Actions
+  - Reducers
+  - Unidirectional Data Flow
+  - State Architecture
+  - Predictable State
+  - Frontend Architecture
+links:
+  - label: Lesson One
+    href: redux-lesson-one.mdx
+summary: Breaks down the core Redux architecture by examining the store, actions, reducers, and view layer, showing how unidirectional data flow transforms shared state into a predictable and traceable system.
+---
+
+# **Lesson 2 — Understanding the Redux Architecture: Store, Actions, Reducers, and View**
+
+---
+
+## **Context / Motivation**
+
+In the previous lesson, we saw _why_ Redux exists: to bring order and predictability to complex, shared, and evolving application state.
+But understanding its architecture requires seeing how Redux transforms _chaos into flow_.
+
+Every robust system—whether it’s a traffic network or a CPU pipeline—follows a predictable pattern of **input → processing → output**. Redux is no different. It is a small, elegant architecture that describes _how data moves_ through your app.
+
+In Redux, that data flow is **unidirectional**—it always moves in one direction:
+
+```
+UI → ACTION → REDUCER → STORE → UI
+```
+
+Let’s explore each component in this cycle carefully.
+
+---
+
+## **Conceptual Explanation**
+
+### **1. The Store: A Single Source of Truth**
+
+The **store** is the heart of Redux.
+It is a plain JavaScript object that holds your entire application state.
+
+```js
+const store = createStore(reducer);
+```
+
+Conceptually, you can think of the store as a _controlled memory_:
+
+- It doesn’t allow arbitrary writes (you can’t just mutate it).
+- It provides controlled read access (`store.getState()`).
+- It allows controlled updates through actions (`store.dispatch()`).
+
+The store ensures that every part of your application sees the same, synchronized state.
+
+**Analogy:**
+Think of the Redux store as a government ledger. Everyone can see the laws (state), but no one can change them directly. To modify them, you must propose a bill (an action) and pass it through the legislature (a reducer).
+
+---
+
+### **2. Actions: Describing What Happened**
+
+An **action** is a plain object that describes _something that happened_ in the application.
+It must have a `type` field (a string) and can optionally have a `payload` (data).
+
+```js
+const action = {
+  type: "ADD_TODO",
+  payload: { id: 1, text: "Learn Redux" },
+};
+```
+
+Notice that the action doesn’t _say what to do_.
+It simply _reports_ an event.
+
+Why?
+Because Redux separates **intention** from **execution**. The _intention_ (the “what happened”) is captured in the action, while the _execution_ (how to update the state) is handled by the reducer.
+
+This separation gives Redux its traceability. Every user interaction, every data update, every API response—can be represented as a sequence of action objects that describe the history of your app.
+
+---
+
+### **3. Reducers: Defining How State Changes**
+
+A **reducer** is a pure function that takes the current state and an action, and returns a new state.
+
+```js
+function todosReducer(state = [], action) {
+  switch (action.type) {
+    case "ADD_TODO":
+      return [...state, action.payload];
+    case "REMOVE_TODO":
+      return state.filter((todo) => todo.id !== action.payload.id);
+    default:
+      return state;
+  }
+}
+```
+
+#### Key properties of reducers:
+
+- They are **pure functions** — given the same input, they always return the same output.
+- They **do not mutate** state. They return new objects instead.
+- They have **no side effects** — no API calls, no timers, no random numbers.
+
+This purity ensures that state transitions are deterministic. If you replay the same sequence of actions, you’ll always end up with the same state.
+
+Reducers are the _logic engine_ of Redux — the place where your business rules live.
+
+---
+
+### **4. Dispatching Actions: The Communication Channel**
+
+To update state, you **dispatch** an action:
+
+```js
+store.dispatch({ type: "ADD_TODO", payload: { id: 1, text: "Learn Redux" } });
+```
+
+This triggers the following sequence:
+
+1. The store receives the action.
+2. It passes the action and current state to the reducer.
+3. The reducer returns a new state.
+4. The store saves that new state.
+5. The store notifies all subscribers (usually React components) that state has changed.
+
+Every data update in Redux follows this path—always predictable, always transparent.
+
+---
+
+### **5. View: React as the Renderer**
+
+The **view** (React) is the final step.
+Components _subscribe_ to parts of the store’s state, and automatically re-render when those parts change.
+
+With React-Redux, this connection looks like:
+
+```js
+import { useSelector, useDispatch } from "react-redux";
+
+function TodoList() {
+  const todos = useSelector((state) => state.todos);
+  const dispatch = useDispatch();
+
+  return (
+    <div>
+      {todos.map((todo) => (
+        <div key={todo.id}>{todo.text}</div>
+      ))}
+      <button
+        onClick={() =>
+          dispatch({
+            type: "ADD_TODO",
+            payload: { id: 2, text: "Learn Toolkit" },
+          })
+        }
+      >
+        Add
+      </button>
+    </div>
+  );
+}
+```
+
+Now, the UI is _reactive_ to the store — it’s no longer pushing and pulling data manually.
+Redux ensures synchronization, React ensures rendering.
+
+---
+
+## **Real-World Illustration**
+
+Imagine a chat application:
+
+1. The user types a message and hits “Send.”
+2. The UI dispatches an action `{ type: 'SEND_MESSAGE', payload: 'Hello!' }`.
+3. The reducer appends that message to the chat log state.
+4. The store updates its internal state.
+5. The UI (which is subscribed to the chat log) re-renders instantly with the new message.
+
+No manual wiring, no callbacks to synchronize, no inconsistent data between components.
+Every change flows predictably through one cycle.
+
+---
+
+## **Evolution / Refinement**
+
+Initially, Redux apps were written by hand — defining constants, writing reducers with switch statements, and manually composing middleware. This gave developers total control, but also produced boilerplate and repetitive code.
+
+Redux Toolkit (RTK) refined this model without changing the architecture. It kept the **same principles**, but simplified the syntax:
+
+- `createSlice()` auto-generates reducers and actions.
+- `configureStore()` sets up the store with sensible defaults.
+- `createAsyncThunk()` handles async flows.
+
+In other words, **Redux Toolkit didn’t replace Redux** — it _codified its best practices_ into a single, convenient API.
+
+---
+
+## **Principle / Takeaway**
+
+Redux is not just a library — it’s an **architecture pattern**.
+
+At its core:
+
+- **Store** holds the truth.
+- **Action** expresses intention.
+- **Reducer** defines transformation.
+- **View** reacts to change.
+
+Because this flow never breaks, Redux guarantees that _you can always trace any piece of data back to its cause_. This makes it not just powerful, but _explainable_ — a property that becomes crucial in large-scale systems.
+
+---
+
+✅ **Next Lesson Preview – Lesson 3:**
+**Implementing a Basic Redux Store (from Scratch)**
+We’ll now implement Redux manually using plain JavaScript — building `createStore`, handling `dispatch`, and understanding `subscribe`. You’ll see Redux’s internal mechanics before we introduce Redux Toolkit.

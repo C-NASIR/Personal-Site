@@ -1,0 +1,278 @@
+---
+id: CF-3010
+title: Lesson 10 Selectors Memoization and Reselect
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T23:32:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - JavaScript
+  - React
+  - Redux
+  - Redux Toolkit
+  - Reselect
+tags:
+  - Selectors
+  - Memoization
+  - Reselect
+  - Performance
+  - Derived State
+summary: Introduces selectors as a data access layer for Redux explains why derived data causes unnecessary recomputation and shows how memoization with Reselect ensures stable references efficient recalculation and predictable component rendering at scale.
+---
+
+# **Lesson 10 — Selectors, Memoization, and Reselect**
+
+---
+
+## **Context / Motivation**
+
+In the previous lesson, you learned how to use `useSelector()` to read state from Redux.
+But as your state grows, you’ll notice a problem:
+
+Every time _any_ part of the Redux state changes, your `useSelector()` hook re-runs its selector function — even if the data you care about hasn’t changed.
+
+In small apps, this is harmless.
+In large, data-heavy applications, this can cause **unnecessary re-renders** and **expensive recalculations**.
+
+That’s where **selectors** and **memoization** come in.
+
+They let you:
+
+- Compute **derived data** efficiently (e.g., totals, filters, aggregates)
+- Prevent **useless re-renders**
+- Keep your state **normalized** and your UI **fast**
+
+This is one of the most underappreciated parts of Redux mastery — turning _data retrieval_ into a clean, composable system.
+
+---
+
+## **Conceptual Explanation**
+
+### **1. What is a Selector?**
+
+A **selector** is simply a **function that extracts or derives data from the Redux store**.
+
+```js
+const selectCartItems = (state) => state.cart.items;
+```
+
+This selector just reads raw data.
+But selectors can also compute new data from existing state:
+
+```js
+const selectCartTotal = (state) =>
+  state.cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+```
+
+These functions:
+
+- Encapsulate _how_ you read or compute data.
+- Make components cleaner (`useSelector(selectCartTotal)` instead of repeating logic).
+- Provide a single point to update if your state structure changes.
+
+---
+
+### **2. Why Memoization Matters**
+
+Without memoization, your derived selectors re-run every time _any_ state change occurs — even if their inputs didn’t change.
+
+```js
+const total = useSelector((state) =>
+  state.cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+);
+```
+
+If `state.users` updates, this computation still runs again unnecessarily.
+It’s wasteful — especially if the computation is complex.
+
+Memoization fixes that.
+
+---
+
+### **3. What is Memoization?**
+
+Memoization means **caching the result of a function** so that if the inputs are the same, you don’t recompute the output.
+
+Formally:
+
+> A memoized function remembers its previous inputs and outputs.
+> When called again with the same inputs, it returns the cached output instead of recalculating.
+
+This ensures that even as Redux state changes globally, selectors that depend only on a small part of it _don’t recompute unless necessary._
+
+---
+
+### **4. Introducing Reselect**
+
+[**Reselect**](https://github.com/reduxjs/reselect) is the official Redux library for creating memoized selectors.
+
+It provides a simple API:
+
+```js
+import { createSelector } from "reselect";
+```
+
+A selector built with `createSelector` has built-in memoization.
+
+Example:
+
+```js
+const selectCartItems = (state) => state.cart.items;
+
+const selectCartTotal = createSelector(
+  [selectCartItems], // input selectors
+  (
+    items // output function
+  ) => items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+);
+```
+
+Now `selectCartTotal(state)`:
+
+- Recomputes _only_ when `state.cart.items` changes.
+- Returns the cached result otherwise.
+
+This means if you update `state.users`, your total won’t recompute unnecessarily — saving time and avoiding re-renders.
+
+---
+
+### **5. Using Reselect in Components**
+
+```js
+import { useSelector } from "react-redux";
+import { selectCartTotal } from "./cartSlice";
+
+function CartSummary() {
+  const total = useSelector(selectCartTotal);
+  return <div>Total: ${total}</div>;
+}
+```
+
+`useSelector` internally uses shallow equality checks,
+and because `selectCartTotal` returns the same cached value until inputs change,
+React won’t re-render the component.
+
+This gives you **referential stability** and **performance optimization** for free.
+
+---
+
+### **6. Composing Selectors**
+
+Selectors are _composable_.
+You can build complex selectors by reusing simpler ones:
+
+```js
+const selectProducts = (state) => state.products.data;
+const selectSearchQuery = (state) => state.products.query;
+
+export const selectFilteredProducts = createSelector(
+  [selectProducts, selectSearchQuery],
+  (products, query) =>
+    products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()))
+);
+```
+
+Now you can combine multiple slices of state in one computation —
+still memoized, still efficient.
+
+---
+
+### **7. Using Selectors Inside Slices**
+
+It’s common practice to define selectors alongside your slice file, so each slice exports:
+
+1. The reducer
+2. The actions
+3. The selectors
+
+Example (`cartSlice.js`):
+
+```js
+import { createSlice, createSelector } from "@reduxjs/toolkit";
+
+const cartSlice = createSlice({
+  name: "cart",
+  initialState: { items: [] },
+  reducers: {
+    addItem: (state, action) => {
+      state.items.push(action.payload);
+    },
+  },
+});
+
+export const { addItem } = cartSlice.actions;
+export default cartSlice.reducer;
+
+// Selectors
+export const selectCartItems = (state) => state.cart.items;
+
+export const selectCartTotal = createSelector([selectCartItems], (items) =>
+  items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+);
+```
+
+This makes every feature self-contained and reusable.
+
+---
+
+## **Real-World Illustration**
+
+Imagine a **music streaming dashboard** where you display:
+
+- Total songs played today
+- Top 5 most-played artists
+- Whether the user has any premium tracks queued
+
+All these are derived from your playback history and user state.
+Without memoization, every state change (like theme toggle or auth refresh) would recompute all aggregates — thousands of array iterations per second.
+
+By using Reselect:
+
+- You isolate computation to relevant data.
+- You reduce wasted work.
+- Your UI remains buttery smooth.
+
+In short: **selectors are your app’s data access layer.**
+
+---
+
+## **Evolution / Refinement**
+
+Originally, Redux encouraged inline selectors inside components:
+
+```js
+useSelector((state) => state.todos.filter((t) => !t.completed));
+```
+
+This was simple, but inefficient and brittle — logic duplicated across components.
+
+Reselect brought discipline:
+
+- A single, composable selector per derived concept.
+- Memoization for free.
+- Centralization of business logic outside the UI layer.
+
+Now, most large Redux codebases treat selectors as **first-class citizens** — a layer of pure, testable functions sitting between state and UI.
+
+---
+
+## **Principle / Takeaway**
+
+Selectors make your Redux app:
+
+- **Faster** (avoid unnecessary recalculations)
+- **Cleaner** (keep logic out of components)
+- **More maintainable** (single source of truth for derived data)
+
+Reselect adds **memoization**, ensuring you compute only when necessary.
+
+> Think of selectors as **queries over your Redux database** —
+> they describe _what you need_, not _how to get it._
+
+---
+
+✅ **Next Lesson Preview – Lesson 11:**
+**Redux DevTools and Debugging Data Flow**
+In the next lesson, we’ll explore how to inspect, trace, and time-travel through Redux state changes using Redux DevTools — an essential skill for diagnosing issues in real projects.

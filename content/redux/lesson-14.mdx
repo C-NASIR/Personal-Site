@@ -1,0 +1,371 @@
+---
+id: CF-3014
+title: Lesson 14 Testing Redux Logic Reducers Async Thunks and Slices
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-17T00:25:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - JavaScript
+  - React
+  - Redux
+  - Redux Toolkit
+  - Jest
+  - MSW
+tags:
+  - Testing
+  - Reducer Testing
+  - Async Thunks
+  - Slice Testing
+  - State Reliability
+  - Regression Prevention
+summary: Covers how to test Redux logic effectively including pure reducer tests slice level tests async thunk lifecycle verification selector correctness and integration testing with real stores to ensure predictable stable and regression resistant state management.
+---
+
+# **Lesson 14 — Testing Redux Logic: Reducers, Async Thunks, and Slices**
+
+---
+
+## **Context / Motivation**
+
+As your Redux logic grows, so does the risk of **regressions** — subtle bugs creeping into reducers, async thunks, or slices as you refactor or add new features.
+
+Testing Redux code ensures that your **state transitions are correct, predictable, and stable** over time.
+
+Redux is inherently testable because:
+
+- Reducers are **pure functions**.
+- Actions are **plain objects**.
+- Async thunks and RTK Query endpoints can be **mocked** easily.
+
+But writing _clean, focused tests_ requires understanding _what to test and at what level._
+
+This lesson will teach you how to test Redux logic from the ground up — from pure reducers to async thunks and slices built with Redux Toolkit.
+
+---
+
+## **Conceptual Explanation**
+
+### **1. Testing Philosophy**
+
+In Redux, you generally test three layers:
+
+| Layer            | What You Test                                                                 | Why It Matters                                           |
+| ---------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------- |
+| **Reducer**      | Given an initial state and an action, does it produce the correct next state? | Ensures core logic correctness                           |
+| **Async Thunks** | Does it dispatch the correct sequence of actions?                             | Ensures correct behavior under async conditions          |
+| **Slices**       | Do reducers + actions integrate correctly?                                    | Ensures Redux Toolkit boilerplate is working as intended |
+
+> Focus on **behavior, not implementation details** — what should happen to state when certain events occur.
+
+---
+
+## **2. Testing Reducers (Pure Functions)**
+
+Reducers are pure functions:
+they take `(state, action)` and return the next state.
+
+### Example reducer:
+
+```js
+function counterReducer(state = { value: 0 }, action) {
+  switch (action.type) {
+    case "counter/increment":
+      return { value: state.value + 1 };
+    case "counter/decrement":
+      return { value: state.value - 1 };
+    default:
+      return state;
+  }
+}
+```
+
+### Test:
+
+```js
+test("should handle increment", () => {
+  const initialState = { value: 0 };
+  const nextState = counterReducer(initialState, { type: "counter/increment" });
+  expect(nextState.value).toBe(1);
+});
+
+test("should handle unknown action", () => {
+  const initialState = { value: 5 };
+  const nextState = counterReducer(initialState, { type: "UNKNOWN" });
+  expect(nextState).toEqual(initialState); // unchanged
+});
+```
+
+✅ Reducer tests are fast, deterministic, and don’t require Redux setup — they’re pure logic tests.
+
+---
+
+## **3. Testing Slices**
+
+When you use `createSlice()`, Redux Toolkit generates both action creators and a reducer.
+You can test them together.
+
+### Example:
+
+```js
+import counterReducer, { increment, decrement } from "./counterSlice";
+
+test("should handle increment", () => {
+  const state = { value: 0 };
+  const newState = counterReducer(state, increment());
+  expect(newState.value).toBe(1);
+});
+```
+
+### Key Tip:
+
+You don’t need to test Redux Toolkit’s internal logic — just that _your_ reducer logic behaves correctly.
+
+---
+
+## **4. Testing Async Thunks**
+
+Async thunks (`createAsyncThunk`) dispatch multiple actions:
+
+- `pending`
+- `fulfilled`
+- `rejected`
+
+You can test:
+
+1. The correct actions are dispatched.
+2. The reducer updates state properly when those actions occur.
+
+### Example Thunk:
+
+```js
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+
+export const fetchUser = createAsyncThunk("users/fetchUser", async (id) => {
+  const response = await axios.get(`/users/${id}`);
+  return response.data;
+});
+```
+
+### Mocking Async Behavior:
+
+Use Jest’s mocking tools:
+
+```js
+import axios from "axios";
+import { fetchUser } from "./usersThunks";
+
+jest.mock("axios");
+
+test("dispatches fulfilled when fetchUser succeeds", async () => {
+  const user = { id: 1, name: "Alice" };
+  axios.get.mockResolvedValueOnce({ data: user });
+
+  const dispatch = jest.fn();
+  const getState = jest.fn();
+
+  await fetchUser(1)(dispatch, getState, undefined);
+
+  expect(dispatch).toHaveBeenCalledWith(
+    expect.objectContaining({ type: "users/fetchUser/pending" })
+  );
+  expect(dispatch).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: "users/fetchUser/fulfilled",
+      payload: user,
+    })
+  );
+});
+```
+
+✅ This ensures your thunk dispatches the right lifecycle actions.
+
+---
+
+## **5. Testing Reducer Reaction to Thunk Actions**
+
+Once you know the thunk dispatches the right actions, test that your reducer updates state correctly.
+
+```js
+import usersReducer from "./usersSlice";
+import { fetchUser } from "./usersThunks";
+
+test("should handle fetchUser.fulfilled", () => {
+  const initialState = { data: null, status: "idle", error: null };
+  const newState = usersReducer(initialState, {
+    type: fetchUser.fulfilled.type,
+    payload: { id: 1, name: "Alice" },
+  });
+  expect(newState.data).toEqual({ id: 1, name: "Alice" });
+  expect(newState.status).toBe("succeeded");
+});
+```
+
+---
+
+## **6. Testing Selectors**
+
+Selectors are pure functions too — test them just like reducers.
+
+```js
+import { selectCartTotal } from "./cartSelectors";
+
+test("selectCartTotal should compute total correctly", () => {
+  const state = {
+    cart: {
+      items: [
+        { price: 10, quantity: 2 },
+        { price: 5, quantity: 1 },
+      ],
+    },
+  };
+  expect(selectCartTotal(state)).toBe(25);
+});
+```
+
+Selectors are trivial to test but crucial for confidence in derived logic.
+
+---
+
+## **7. Testing RTK Query**
+
+RTK Query APIs are **usually not tested directly** — they’re declarative and auto-generated.
+Instead, test the **API layer or mock server** they depend on.
+
+However, you can test individual endpoint behavior by mocking `fetchBaseQuery`.
+
+### Example:
+
+```js
+import { setupApiStore } from "./testUtils";
+import { usersApi } from "../features/users/usersApi";
+import { server } from "../mocks/server";
+import { rest } from "msw";
+
+test("getUsers should fetch and store data", async () => {
+  const storeRef = setupApiStore(usersApi);
+  await storeRef.store.dispatch(usersApi.endpoints.getUsers.initiate());
+
+  const state = storeRef.store.getState();
+  expect(state.usersApi.queries["getUsers(undefined)"].status).toBe(
+    "fulfilled"
+  );
+});
+```
+
+Most teams, however, prefer to **mock API responses in integration tests** using libraries like:
+
+- **MSW (Mock Service Worker)**
+- **Jest mocks for axios/fetch**
+
+---
+
+## **8. Testing Store Integration**
+
+For higher-level integration testing, create a real Redux store and dispatch actions:
+
+```js
+import { configureStore } from "@reduxjs/toolkit";
+import usersReducer from "../features/users/usersSlice";
+import { fetchUser } from "../features/users/usersThunks";
+import axios from "axios";
+
+jest.mock("axios");
+
+test("fetchUser updates state correctly", async () => {
+  axios.get.mockResolvedValueOnce({ data: { id: 1, name: "Alice" } });
+
+  const store = configureStore({ reducer: { users: usersReducer } });
+  await store.dispatch(fetchUser(1));
+
+  const state = store.getState().users;
+  expect(state.status).toBe("succeeded");
+  expect(state.data.name).toBe("Alice");
+});
+```
+
+✅ This mimics real store behavior — it’s as close as you can get to a production test.
+
+---
+
+## **9. Testing Middleware**
+
+If you wrote custom middleware (e.g., analytics, logger),
+you can test that it calls `next(action)` and behaves correctly:
+
+```js
+test("analytics middleware should log fulfilled actions", () => {
+  const next = jest.fn();
+  const store = { getState: jest.fn(), dispatch: jest.fn() };
+  const action = { type: "users/fetchUsers/fulfilled" };
+
+  analyticsMiddleware(store)(next)(action);
+
+  expect(console.log).toHaveBeenCalledWith(
+    expect.stringContaining("Analytics event")
+  );
+  expect(next).toHaveBeenCalledWith(action);
+});
+```
+
+---
+
+## **10. Testing Hierarchy Cheat Sheet**
+
+| Type       | Tool              | Test Goal                     |
+| ---------- | ----------------- | ----------------------------- |
+| Reducer    | Jest              | Pure logic transitions        |
+| Slice      | Jest              | Combined reducer + actions    |
+| Thunk      | Jest + mocks      | Async dispatch order          |
+| Selector   | Jest              | Derived logic correctness     |
+| RTK Query  | MSW / Integration | End-to-end API flow           |
+| Middleware | Jest              | Behavior + pipeline integrity |
+
+---
+
+## **Real-World Illustration**
+
+In a **finance dashboard** app:
+
+- You test that `transactionsSlice` correctly adds and sorts new transactions.
+- You test that `fetchExchangeRates` dispatches the right actions under network error.
+- You test that your `selectMonthlyTotal` selector returns correct totals across multiple currencies.
+
+With those tests in place, a refactor (like switching APIs or changing data shape) becomes safe — your tests will catch any mismatched assumptions immediately.
+
+---
+
+## **Evolution / Refinement**
+
+Early Redux testing was painful:
+you had to mock `dispatch`, `getState`, and manually verify action arrays.
+
+Redux Toolkit simplified testing because:
+
+- Reducers are automatically pure.
+- Thunks are self-contained async functions.
+- Slices unify logic (no more scattered constants and actions).
+
+Modern Redux testing focuses on **outcomes** (state changes), not **mechanics** (dispatch calls).
+
+---
+
+## **Principle / Takeaway**
+
+Redux is one of the most testable architectures ever designed:
+
+- Pure reducers → deterministic state changes
+- Plain actions → easy mocks
+- Async thunks → predictable lifecycle
+- RTK Query → declarative fetching
+
+> Testing Redux isn’t about coverage — it’s about **confidence** that your state layer behaves like a finely tuned machine.
+
+---
+
+✅ **Next Lesson Preview – Lesson 15:**
+**Performance Optimization in Redux Apps**
+In the next lesson, we’ll study how Redux interacts with React’s render cycle — and learn techniques like memoized selectors, batching, and store partitioning to keep your app blazing fast at scale.

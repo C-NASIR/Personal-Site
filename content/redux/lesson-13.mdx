@@ -1,0 +1,347 @@
+---
+id: CF-3013
+title: Lesson 13 RTK Query Data Fetching and Caching Made Easy
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-17T00:10:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - JavaScript
+  - React
+  - Redux
+  - Redux Toolkit
+  - RTK Query
+tags:
+  - Data Fetching
+  - Caching
+  - Server State
+  - API Integration
+  - Async State Management
+  - Cache Invalidation
+summary: Introduces RTK Query as Redux Toolkit’s built in solution for data fetching caching and synchronization showing how queries mutations automatic cache management and tag based invalidation eliminate async boilerplate while keeping Redux as the single source of truth.
+---
+
+# **Lesson 13 — RTK Query: Data Fetching and Caching Made Easy**
+
+---
+
+## **Context / Motivation**
+
+By now, you’ve seen how Redux Toolkit’s `createAsyncThunk()` makes async logic easier — dispatching `pending`, `fulfilled`, and `rejected` actions automatically.
+But as applications grow, **data fetching** becomes the single largest source of repetitive Redux code.
+
+Every feature seems to need:
+
+- Loading and error state management
+- Caching or reusing data
+- Refetching when stale
+- Preventing duplicate requests
+- Synchronizing with server mutations
+
+Even with `createAsyncThunk()`, you end up writing:
+
+```js
+status = 'loading'
+try { await fetch... }
+status = 'succeeded'
+```
+
+again and again.
+
+Redux Toolkit’s **RTK Query** was designed to eliminate this boilerplate.
+It provides **a complete data-fetching and caching system built into Redux** — while keeping Redux principles intact.
+
+Think of RTK Query as:
+
+> _“`createAsyncThunk()` on autopilot, with built-in caching, invalidation, and re-fetching logic.”_
+
+---
+
+## **Conceptual Explanation**
+
+### **1. What RTK Query Is**
+
+RTK Query is a data-fetching and caching layer built on top of Redux Toolkit.
+It:
+
+- Handles **fetching, caching, and deduplication** automatically
+- Manages **loading/error/success** state for you
+- Keeps **API data in the Redux store** (shared between components)
+- Simplifies CRUD operations and **cache invalidation**
+
+It’s especially powerful for apps that talk to REST APIs or GraphQL endpoints.
+
+---
+
+### **2. Setting Up RTK Query**
+
+The core of RTK Query is an **API slice**, created with `createApi()`.
+
+```js
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+
+export const usersApi = createApi({
+  reducerPath: "usersApi", // name in store
+  baseQuery: fetchBaseQuery({ baseUrl: "/api" }), // handles fetch
+  endpoints: (builder) => ({
+    getUsers: builder.query({
+      query: () => "/users",
+    }),
+  }),
+});
+```
+
+This defines:
+
+- `baseQuery`: a generic fetcher (can be Axios-like)
+- `endpoints`: a list of operations (queries or mutations)
+
+Each endpoint auto-generates a React hook for you:
+
+```js
+export const { useGetUsersQuery } = usersApi;
+```
+
+Now you can fetch and cache data in your component with one line.
+
+---
+
+### **3. Integrating RTK Query into Your Store**
+
+Add the API’s reducer and middleware to the store configuration:
+
+```js
+import { configureStore } from "@reduxjs/toolkit";
+import { usersApi } from "../features/users/usersApi";
+
+export const store = configureStore({
+  reducer: {
+    [usersApi.reducerPath]: usersApi.reducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(usersApi.middleware),
+});
+```
+
+That’s it — the API slice now handles its own cache, async states, and updates.
+
+---
+
+### **4. Using RTK Query Hooks in Components**
+
+Now you can use `useGetUsersQuery()` directly in React:
+
+```jsx
+import React from "react";
+import { useGetUsersQuery } from "./usersApi";
+
+function UsersList() {
+  const { data, error, isLoading, isFetching, refetch } = useGetUsersQuery();
+
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <div>
+      <button onClick={refetch}>Refresh</button>
+      <ul>
+        {data.map((user) => (
+          <li key={user.id}>{user.name}</li>
+        ))}
+      </ul>
+      {isFetching && <p>Updating...</p>}
+    </div>
+  );
+}
+```
+
+RTK Query automatically:
+
+- Caches the response in Redux
+- Returns cached data instantly if available
+- Re-fetches only when necessary
+
+No manual thunks, no reducers, no action types — all automatic.
+
+---
+
+### **5. Queries vs Mutations**
+
+RTK Query defines two kinds of endpoints:
+
+| Type         | Purpose                       | Example                                                                                        |
+| ------------ | ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Query**    | Fetch data (GET)              | `builder.query({ query: () => '/users' })`                                                     |
+| **Mutation** | Modify data (POST/PUT/DELETE) | `builder.mutation({ query: (newUser) => ({ url: '/users', method: 'POST', body: newUser }) })` |
+
+#### Example of Mutation:
+
+```js
+const usersApi = createApi({
+  baseQuery: fetchBaseQuery({ baseUrl: "/api" }),
+  endpoints: (builder) => ({
+    addUser: builder.mutation({
+      query: (user) => ({
+        url: "/users",
+        method: "POST",
+        body: user,
+      }),
+    }),
+  }),
+});
+
+export const { useAddUserMutation } = usersApi;
+```
+
+In React:
+
+```jsx
+const [addUser, { isLoading }] = useAddUserMutation();
+
+const handleSubmit = async () => {
+  await addUser({ name: "Alice", email: "a@example.com" });
+};
+```
+
+You get a clean, declarative API for performing side effects.
+
+---
+
+### **6. Automatic Caching and Refetching**
+
+RTK Query caches all fetched data in Redux.
+When the same query is called again with identical arguments, RTK Query:
+
+- Returns cached data immediately
+- Re-fetches in the background if data is stale
+
+Example:
+
+```js
+const { data } = useGetUsersQuery(); // cached for all components
+```
+
+If another component calls `useGetUsersQuery()` with the same arguments,
+it reuses the same cache entry instead of hitting the network again.
+
+This means **zero duplicate API calls** and perfectly synchronized UI.
+
+---
+
+### **7. Cache Invalidation (Re-fetch After Mutations)**
+
+When you perform a mutation (like adding or deleting a user), you often want queries to refresh.
+
+RTK Query provides **tag-based invalidation**:
+
+```js
+export const usersApi = createApi({
+  baseQuery: fetchBaseQuery({ baseUrl: "/api" }),
+  tagTypes: ["User"], // declare tag types
+  endpoints: (builder) => ({
+    getUsers: builder.query({
+      query: () => "/users",
+      providesTags: ["User"],
+    }),
+    addUser: builder.mutation({
+      query: (newUser) => ({
+        url: "/users",
+        method: "POST",
+        body: newUser,
+      }),
+      invalidatesTags: ["User"], // refetch getUsers
+    }),
+  }),
+});
+```
+
+Now, when you call `addUser()`,
+RTK Query automatically **invalidates** all queries that provide the `User` tag —
+triggering them to re-fetch fresh data.
+
+This means your UI always stays up to date without manual dispatches.
+
+---
+
+### **8. Handling Parameters and Arguments**
+
+RTK Query automatically keys cache entries by their arguments.
+
+Example:
+
+```js
+getUserById: builder.query({
+  query: (id) => `/users/${id}`,
+});
+```
+
+```js
+const { data } = useGetUserByIdQuery(42);
+```
+
+RTK Query will:
+
+- Cache the result under the key `"users/42"`
+- Reuse that cache if the same ID is requested again
+- Fetch new data if a different ID is provided
+
+Each unique parameter creates its own cache entry — automatic and safe.
+
+---
+
+## **Real-World Illustration**
+
+Imagine a **project management app** with:
+
+- `/projects` page → fetches list of projects
+- `/projects/:id` page → fetches project details
+- `/projects/:id/tasks` → fetches tasks per project
+- “Add Task” → posts a new task and refreshes the list
+
+With RTK Query:
+
+- Each endpoint defines a query or mutation
+- Each list or detail view calls a simple `useGet...Query()` hook
+- Adding or deleting a task automatically triggers refetch
+- Redux store keeps everything cached, normalized, and in sync
+
+No thunks, no `status` flags, no manual refetch calls — just declarative data flows.
+
+---
+
+## **Evolution / Refinement**
+
+Before RTK Query:
+
+- Developers wrote repetitive thunks, reducers, and selectors for every API call.
+- Caching was manual (and often inconsistent).
+- Many switched to external libraries like React Query or SWR.
+
+RTK Query evolved from those lessons — combining **React Query’s data layer** with **Redux’s predictability and DevTools integration.**
+Now you can get React Query–level ergonomics **without leaving Redux.**
+
+---
+
+## **Principle / Takeaway**
+
+RTK Query brings **data fetching, caching, and synchronization** under the same predictable Redux umbrella.
+
+It:
+
+- Removes 80% of async boilerplate.
+- Provides automatic caching and invalidation.
+- Exposes simple hooks for queries and mutations.
+- Keeps Redux as your single source of truth.
+
+> In modern Redux, `createSlice` handles _local state logic_,
+> while `createApi` handles _remote data logic._
+
+Together, they make your state layer both elegant and production-grade.
+
+---
+
+✅ **Next Lesson Preview – Lesson 14:**
+**Testing Redux Logic — Reducers, Async Thunks, and Slices**
+In the next lesson, we’ll learn how to test Redux code — from reducers and slices to async actions — ensuring your data logic remains correct and stable as your app evolves.

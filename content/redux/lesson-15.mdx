@@ -1,0 +1,381 @@
+---
+id: CF-3015
+title: Lesson 15 Performance Optimization in Redux Apps
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-17T00:40:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - JavaScript
+  - React
+  - Redux
+  - Redux Toolkit
+  - Reselect
+  - RTK Query
+tags:
+  - Performance Optimization
+  - React Rendering
+  - Memoization
+  - Selectors
+  - State Architecture
+  - Scalability
+  - Rendering Efficiency
+summary: Explains how to optimize Redux applications by minimizing unnecessary re-renders optimizing selectors with memoization structuring reducers efficiently leveraging RTK Query caching and applying React level techniques to keep large scale apps fast and responsive.
+---
+
+# **Lesson 15 — Performance Optimization in Redux Apps**
+
+---
+
+## **Context / Motivation**
+
+Redux provides a predictable, transparent state model — but as your application grows, **performance** can quietly degrade.
+
+You might notice:
+
+- Components re-rendering more often than expected
+- Selectors recalculating unnecessarily
+- The UI becoming sluggish under heavy data updates
+
+These issues don’t come from Redux itself — they come from **how we use it.**
+
+The goal of this lesson is to make you fluent in performance tuning at every level:
+
+> From _reducers_ to _selectors_ to _React components_,
+> so that your Redux architecture remains efficient and scalable.
+
+---
+
+## **1. Understanding React–Redux Re-render Behavior**
+
+Before optimizing, you must know what triggers a re-render.
+
+When Redux state updates, React-Redux does three things:
+
+1. It checks each subscribed component’s `useSelector()` function.
+2. If the **selected value changed** (by shallow comparison), the component re-renders.
+3. Otherwise, it skips rendering.
+
+Example:
+
+```js
+const username = useSelector((state) => state.user.name);
+```
+
+✅ Re-renders only when `state.user.name` changes.
+🚫 But if you return an object or array, React sees a new reference every time — and re-renders even when data is the same.
+
+```js
+const user = useSelector((state) => state.user); // Always new reference
+```
+
+So, to prevent unnecessary updates:
+
+- Select primitive values or memoized selectors.
+- Avoid creating new objects inline.
+
+---
+
+## **2. The Three Layers of Redux Performance**
+
+| Layer          | Common Pitfall                      | Optimization Technique                      |
+| -------------- | ----------------------------------- | ------------------------------------------- |
+| **Reducers**   | Unnecessary deep cloning            | Immer (built-in in RTK)                     |
+| **Selectors**  | Recomputing derived data repeatedly | Memoization via Reselect                    |
+| **Components** | Re-rendering on irrelevant updates  | Proper `useSelector` scoping & `React.memo` |
+
+Let’s go through each layer in depth.
+
+---
+
+## **3. Optimizing Reducers**
+
+Redux Toolkit already helps you write optimal reducers via **Immer**.
+
+Example:
+
+```js
+state.items.push(newItem);
+```
+
+Immer tracks changes at the field level, not the whole object.
+So only modified branches are replaced — this avoids deep copies.
+
+Still, be careful:
+
+- Avoid spreading whole arrays or objects unnecessarily.
+- Prefer updating specific fields or elements.
+- Keep reducers pure and small — don’t compute derived data here.
+
+Example (inefficient):
+
+```js
+state.users = [...state.users, newUser];
+```
+
+Example (better):
+
+```js
+state.users.push(newUser);
+```
+
+Immer ensures immutability with minimal structural cloning.
+
+---
+
+## **4. Optimizing Selectors with Memoization**
+
+Selectors are where performance problems quietly multiply.
+
+Consider:
+
+```js
+const expensiveUsers = useSelector((state) =>
+  state.users.data.filter((u) => u.isActive)
+);
+```
+
+This re-runs `.filter()` on _every render_, even if the users haven’t changed.
+
+✅ Solution: use **Reselect** to memoize derived results.
+
+```js
+import { createSelector } from "reselect";
+
+const selectUsers = (state) => state.users.data;
+
+export const selectActiveUsers = createSelector([selectUsers], (users) =>
+  users.filter((u) => u.isActive)
+);
+```
+
+Now `selectActiveUsers` recomputes only when `state.users.data` changes — not on every render.
+
+💡 **Rule of thumb:**
+If your selector does computation (`.map`, `.reduce`, `.filter`), memoize it.
+
+---
+
+## **5. Component-level Optimizations**
+
+### **a. Narrow Selectors**
+
+Select as little data as possible.
+
+❌ Bad:
+
+```js
+const user = useSelector((state) => state.user);
+```
+
+✅ Good:
+
+```js
+const name = useSelector((state) => state.user.name);
+const email = useSelector((state) => state.user.email);
+```
+
+Each component should subscribe only to the data it needs.
+
+---
+
+### **b. Avoid Inline Object Creation**
+
+React-Redux uses shallow equality by default.
+If your selector returns a new object or array every time, it always fails equality.
+
+❌ Bad:
+
+```js
+const userInfo = useSelector((state) => ({
+  name: state.user.name,
+  email: state.user.email,
+}));
+```
+
+✅ Better:
+
+```js
+const name = useSelector((state) => state.user.name);
+const email = useSelector((state) => state.user.email);
+```
+
+Or use a memoized selector that returns the same object reference when data is unchanged.
+
+---
+
+### **c. Use `React.memo`**
+
+Wrap pure presentational components in `React.memo()` to prevent unnecessary re-renders when props haven’t changed.
+
+```jsx
+const UserCard = React.memo(({ user }) => <div>{user.name}</div>);
+```
+
+---
+
+### **d. Batch Updates**
+
+When multiple actions are dispatched in a single event handler, React may render after each one.
+
+Redux automatically batches updates in React 18+,
+but if you’re on an older version, use:
+
+```js
+import { batch } from "react-redux";
+
+batch(() => {
+  dispatch(updateName("Alice"));
+  dispatch(updateEmail("alice@example.com"));
+});
+```
+
+This ensures only **one** re-render at the end.
+
+---
+
+## **6. Store Partitioning (Scaling the State Tree)**
+
+As your app grows, not every state change should affect the entire app.
+
+You can partition your Redux store logically:
+
+```js
+configureStore({
+  reducer: {
+    auth: authReducer,
+    products: productsReducer,
+    cart: cartReducer,
+  },
+});
+```
+
+Each reducer manages its own sub-state,
+so updating one branch (e.g. `cart`) doesn’t trigger re-renders for unrelated ones (e.g. `auth`).
+
+Keep slices independent and cohesive — this is architectural optimization.
+
+---
+
+## **7. RTK Query and Caching Efficiency**
+
+RTK Query is inherently optimized:
+
+- It **deduplicates** identical requests.
+- It **shares cached responses** across components.
+- It **reuses data** until invalidated by tags.
+- It **avoids re-renders** if cached data hasn’t changed.
+
+You can further fine-tune by:
+
+- Setting `keepUnusedDataFor` (cache lifetime)
+- Using `refetchOnFocus` or `refetchOnReconnect` strategically
+
+Example:
+
+```js
+useGetUsersQuery(undefined, {
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
+  keepUnusedDataFor: 300,
+});
+```
+
+---
+
+## **8. Avoiding Over-Normalization**
+
+Redux encourages normalization — storing entities by ID.
+But over-normalizing small data can add unnecessary complexity.
+
+Use normalization when:
+
+- You have large collections that update frequently.
+- You need fast lookup by ID.
+
+Avoid it for simple or static lists.
+
+A balanced structure minimizes both computation and serialization overhead.
+
+---
+
+## **9. DevTools for Performance Diagnosis**
+
+Use:
+
+- **Redux DevTools → Diff tab**: see how much of the state changes on each action.
+- **React Profiler**: identify which components re-render after each state update.
+- **Console trace in useSelector**:
+
+  ```js
+  const user = useSelector((state) => state.user);
+  console.log("Rendered User component");
+  ```
+
+This helps pinpoint unnecessary re-renders.
+
+---
+
+## **10. Summary: Performance Optimization Checklist**
+
+| Layer          | Optimization                                           | Goal                        |
+| -------------- | ------------------------------------------------------ | --------------------------- |
+| **Reducers**   | Use Immer (no deep clones), update small subtrees      | Minimize structural copying |
+| **Selectors**  | Memoize expensive computations                         | Avoid recomputation         |
+| **Components** | Narrow selectors, use primitives, avoid inline objects | Prevent re-renders          |
+| **Hooks**      | `React.memo`, `useCallback`, `useMemo`                 | Stable references           |
+| **Store**      | Partition reducers                                     | Isolate updates             |
+| **RTK Query**  | Cache configuration                                    | Reduce network load         |
+
+---
+
+## **Real-World Illustration**
+
+In a **dashboard app** showing hundreds of widgets:
+
+- Each widget reads one slice of global state (narrow `useSelector`).
+- Derived metrics use memoized selectors (`createSelector`).
+- Widget components wrapped in `React.memo()`.
+- RTK Query fetches shared data once and caches it.
+
+The result:
+Thousands of data points, dozens of widgets — but minimal re-renders and near-instant updates.
+
+---
+
+## **Evolution / Refinement**
+
+Earlier Redux apps suffered from over-rendering because:
+
+- Developers returned new objects from selectors.
+- They didn’t use memoization.
+- They dispatched multiple actions per interaction.
+
+Modern Redux (with RTK + hooks) gives you all the tools to fix this —
+the challenge now is _awareness_, not _ability._
+
+---
+
+## **Principle / Takeaway**
+
+Performance in Redux isn’t about micro-optimizing reducers —
+it’s about minimizing **unnecessary re-renders and recomputation**.
+
+Follow these core principles:
+
+- Select narrowly.
+- Memoize derived data.
+- Batch updates.
+- Trust RTK Query’s cache.
+- Keep your slices cleanly separated.
+
+> Redux doesn’t slow your app down — careless subscriptions do.
+> Master state flow, and Redux becomes one of the most efficient state systems in modern UI engineering.
+
+---
+
+✅ **Next Lesson Preview – Lesson 16:**
+**Advanced Patterns — Entity Adapters, Matchers, and Cross-Slice Communication**
+In the next lesson, we’ll learn how to handle complex, interdependent data (like posts, comments, and users) using advanced Redux Toolkit features that make large-scale state management elegant and consistent.

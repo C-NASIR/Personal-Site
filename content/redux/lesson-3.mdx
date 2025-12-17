@@ -1,0 +1,244 @@
+---
+id: CF-3003
+title: Lesson 3 Implementing a Basic Redux Store From Scratch
+classification: UNCLASSIFIED
+status: ACTIVE
+updatedAt: 2025-12-16T21:45:00.000Z
+owner: Frontend Systems Education
+role: Curriculum Author
+timeframe: 1 lesson
+stack:
+  - JavaScript
+  - Redux
+tags:
+  - Redux Core
+  - createStore
+  - Reducers
+  - Actions
+  - Pure Functions
+  - Deterministic State
+  - State Container
+  - Frontend Architecture
+links:
+  - label: Lesson Two
+    href: redux-lesson-two.mdx
+summary: Walks through implementing a minimal Redux store from scratch to demystify createStore, dispatch, subscribe, and reducers, revealing Redux as a simple, deterministic state container built on pure functions.
+---
+
+# **Lesson 3 — Implementing a Basic Redux Store (From Scratch)**
+
+---
+
+## **Context / Motivation**
+
+You’ve now seen the **conceptual architecture** of Redux —
+store → actions → reducer → view → store.
+
+But one of the best ways to truly _understand_ a system is to **build it yourself**.
+
+Redux, at its core, is deceptively simple. It’s less than 100 lines of JavaScript. By implementing it manually, you’ll see that Redux isn’t “magic.” It’s simply an elegant application of _pure functions_ and _controlled state transitions._
+
+This lesson will help you see inside the “black box” of `createStore`, so that when we later move to **Redux Toolkit**, you understand what it’s automating for you.
+
+---
+
+## **Conceptual Explanation**
+
+### **1. What `createStore` Really Does**
+
+The Redux store performs just three core jobs:
+
+1. **Hold state** – keep track of the current state tree.
+2. **Allow access to state** – via `getState()`.
+3. **Allow state updates** – via `dispatch(action)`.
+4. **Notify subscribers** – via `subscribe(listener)` whenever state changes.
+
+That’s it.
+
+Let’s re-create this step by step.
+
+---
+
+### **2. Building `createStore` Manually**
+
+```js
+function createStore(reducer) {
+  let state;
+  let listeners = [];
+
+  // 1. Return the current state
+  function getState() {
+    return state;
+  }
+
+  // 2. Dispatch an action
+  function dispatch(action) {
+    state = reducer(state, action); // pure transformation
+    listeners.forEach((listener) => listener());
+  }
+
+  // 3. Subscribe to changes
+  function subscribe(listener) {
+    listeners.push(listener);
+    // return an unsubscribe function
+    return () => {
+      listeners = listeners.filter((l) => l !== listener);
+    };
+  }
+
+  // Initialize store with a dummy action
+  dispatch({ type: "@@INIT" });
+
+  // Return the API
+  return { getState, dispatch, subscribe };
+}
+```
+
+That’s a **complete Redux store** implementation.
+
+---
+
+### **3. Writing a Simple Reducer**
+
+Reducers define _how_ the state changes when an action occurs.
+
+Let’s make a simple counter reducer:
+
+```js
+function counterReducer(state = { count: 0 }, action) {
+  switch (action.type) {
+    case "INCREMENT":
+      return { count: state.count + 1 };
+    case "DECREMENT":
+      return { count: state.count - 1 };
+    default:
+      return state;
+  }
+}
+```
+
+Notice two things:
+
+1. It’s a **pure function** – no side effects.
+2. It **returns new state** – not mutating the old one.
+
+---
+
+### **4. Connecting the Reducer to the Store**
+
+Now let’s create the store and test how the data flows:
+
+```js
+const store = createStore(counterReducer);
+
+console.log(store.getState()); // { count: 0 }
+
+store.dispatch({ type: "INCREMENT" });
+console.log(store.getState()); // { count: 1 }
+
+store.dispatch({ type: "INCREMENT" });
+console.log(store.getState()); // { count: 2 }
+
+store.dispatch({ type: "DECREMENT" });
+console.log(store.getState()); // { count: 1 }
+```
+
+You’ve just recreated Redux’s update mechanism.
+Each `dispatch()` call sends an _intention_ to the reducer, which deterministically transforms the state.
+
+---
+
+### **5. Subscribing to State Changes**
+
+Let’s add reactivity:
+
+```js
+const unsubscribe = store.subscribe(() => {
+  console.log("State changed:", store.getState());
+});
+
+store.dispatch({ type: "INCREMENT" }); // logs "State changed: { count: 2 }"
+store.dispatch({ type: "DECREMENT" }); // logs "State changed: { count: 1 }"
+
+unsubscribe(); // stop listening
+```
+
+Each time the state changes, all subscribers are notified.
+This is the same mechanism React-Redux uses under the hood to trigger component re-renders.
+
+---
+
+## **Real-World Illustration**
+
+Imagine you’re building a simple **shopping cart** app:
+
+- The **store** holds the cart items and total.
+- Each **action** represents an event like `ADD_ITEM`, `REMOVE_ITEM`, or `CLEAR_CART`.
+- The **reducer** defines how the state responds to those actions.
+- The **view** (React components) subscribes to changes and re-renders when necessary.
+
+For example:
+
+```js
+function cartReducer(state = { items: [] }, action) {
+  switch (action.type) {
+    case "ADD_ITEM":
+      return { items: [...state.items, action.payload] };
+    case "REMOVE_ITEM":
+      return { items: state.items.filter((i) => i.id !== action.payload.id) };
+    default:
+      return state;
+  }
+}
+```
+
+Now, any UI can dispatch actions like:
+
+```js
+store.dispatch({ type: "ADD_ITEM", payload: { id: 1, name: "Laptop" } });
+```
+
+and automatically stay consistent across the app.
+
+You’ve replaced chaotic state handling with a transparent, deterministic system.
+
+---
+
+## **Evolution / Refinement**
+
+While this minimal implementation is powerful, real-world applications need more:
+
+- **Multiple reducers** for different features
+  → solved by `combineReducers()`
+- **Async logic** like API calls
+  → solved by middleware (e.g., `redux-thunk`)
+- **Developer tools** for time travel and debugging
+  → solved by `compose()` and DevTools integration
+
+These extensions led to Redux’s modern API design, and eventually to **Redux Toolkit**, which automates most of this setup.
+
+However, understanding this “manual” core means you’ll never see Redux as a black box again.
+RTK simply wraps these exact steps in cleaner abstractions.
+
+---
+
+## **Principle / Takeaway**
+
+Redux is fundamentally **a deterministic state container**.
+
+By building it manually, you’ve seen:
+
+- The **store** keeps your state consistent.
+- **Actions** describe what happened.
+- **Reducers** compute the next state purely.
+- **Subscribers** react to change.
+
+Everything else — DevTools, middleware, async helpers — are just refinements of this core cycle.
+
+Understanding this flow deeply is what distinguishes developers who “use Redux” from those who **master state management.**
+
+---
+
+✅ **Next Lesson Preview – Lesson 4:**
+**Action Creators and Middleware — Making Redux Extensible**
+We’ll now formalize how actions are created and see how middleware lets us intercept, transform, and extend Redux’s behavior — preparing the ground for async actions and Redux Toolkit.
