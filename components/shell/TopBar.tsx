@@ -17,8 +17,7 @@ export function TopBar({ breadcrumbs = [], onToggleSidebar }: TopBarProps) {
   const [clock, setClock] = useState<Date | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const quickNav = [
-    { label: "About", href: "/about" },
-    { label: "Credentials", href: "/credentials" },
+    { label: "Home", href: "/dash" },
     { label: "Contact", href: "/contact" },
   ];
 

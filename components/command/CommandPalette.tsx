@@ -37,28 +37,12 @@ export type CommandResult = {
 
 const STATIC_NAVIGATION_COMMANDS: CommandItem[] = [
   {
-    id: "nav-dashboard",
-    label: "Go to Dashboard",
+    id: "nav-home",
+    label: "Go to Home Profile",
     route: "/dash",
     type: "navigation",
     meta: "Navigation",
-    keywords: ["home", "dashboard", "main"],
-  },
-  {
-    id: "nav-about",
-    label: "Go to Identity Profile",
-    route: "/about",
-    type: "navigation",
-    meta: "Navigation",
-    keywords: ["about", "identity", "profile"],
-  },
-  {
-    id: "nav-credentials",
-    label: "Go to Credentials Overview",
-    route: "/credentials",
-    type: "navigation",
-    meta: "Navigation",
-    keywords: ["credentials", "resume", "references"],
+    keywords: ["home", "profile", "nasir", "dashboard"],
   },
   {
     id: "nav-contact",

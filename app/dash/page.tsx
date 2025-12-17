@@ -1,40 +1,32 @@
-import { DashboardScreen } from "@/components/dashboard/DashboardScreen";
 import { AppShell } from "@/components/shell/AppShell";
+import { HomeProfile } from "@/components/profile/HomeProfile";
 import { buildPageMetadata } from "@/components/seo/metadata";
-import {
-  getAllRecords,
-  getDirectoryCounts,
-  getDirectoryRecords,
-} from "@/lib/content";
+import { getAllRecords, getDirectoryCounts } from "@/lib/content";
 import { getDirectoryMetas } from "@/lib/directories";
 import { buildSearchIndex } from "@/lib/search/index";
 
 export const metadata = buildPageMetadata({
-  title: "Dashboard",
+  title: "Nasir · Software Engineer",
   path: "/dash",
-  description: "Main dossier dashboard with directories and intel logs.",
+  description: "Full-stack engineer profile, skills, and mission-ready work.",
 });
 
 export default async function DashboardPage() {
-  const [directoryCounts, records, allRecords, directories] = await Promise.all(
-    [
-      getDirectoryCounts(),
-      getDirectoryRecords("case"),
-      getAllRecords(),
-      getDirectoryMetas(),
-    ],
-  );
+  const [directoryCounts, allRecords, directories] = await Promise.all([
+    getDirectoryCounts(),
+    getAllRecords(),
+    getDirectoryMetas(),
+  ]);
 
   const searchDocuments = buildSearchIndex(allRecords);
 
   return (
     <AppShell
       directories={directories}
-      activeDirectory="case"
       directoryCounts={directoryCounts}
       searchDocuments={searchDocuments}
     >
-      <DashboardScreen key="case" directory="case" records={records} />
+      <HomeProfile />
     </AppShell>
   );
 }

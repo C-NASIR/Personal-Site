@@ -27,14 +27,7 @@ export function buildSearchIndex(records: ContentRecord[]): SearchDocument[] {
   return records.map((record) => {
     const bodyText = record.body.replace(/\s+/g, " ").trim();
     const preview = record.summary || bodyText.slice(0, BODY_SNIPPET_LENGTH);
-    const fileRoute =
-      record.directory === "case"
-        ? `/files/case/${record.slug}`
-        : record.directory === "intel"
-          ? `/files/intel/${record.slug}`
-          : record.directory === "logs"
-            ? `/files/logs/${record.slug}`
-            : `/files/credentials/${record.slug}`;
+    const fileRoute = `/files/${record.directory}/${record.slug}`;
 
     return {
       id: record.id,

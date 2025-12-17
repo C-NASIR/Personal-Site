@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import clsx from "clsx";
 import Link from "next/link";
@@ -21,11 +21,10 @@ export function Sidebar({
   onNavigate,
 }: SidebarProps) {
   const pathname = usePathname();
-  const { directories, directoryMap } = useDirectoryMetadata();
+  const { directories } = useDirectoryMetadata();
   const currentDirectory = activeDirectory ?? null;
   const profileLinks = [
-    { label: "Identity", href: "/about" },
-    { label: "Credentials", href: "/credentials" },
+    { label: "Home Profile", href: "/dash" },
     { label: "Secure Comms", href: "/contact" },
   ];
   const sidebarClass =
@@ -35,40 +34,7 @@ export function Sidebar({
 
   return (
     <aside className={sidebarClass}>
-      <p className="text-[0.6rem] uppercase tracking-[0.5em] text-green-500/80">
-        Directories
-      </p>
-      <ul className="mt-4 flex-1 space-y-2">
-        {directories.map((directory) => {
-          const isActive = currentDirectory === directory.id;
-          return (
-            <li key={directory.id}>
-              <Link
-                className={clsx(
-                  "flex flex-col gap-1 rounded border px-3 py-2 transition",
-                  isActive
-                    ? "border-green-400/50 bg-green-500/10 text-green-100 shadow-inner shadow-green-400/30"
-                    : "border-green-900/30 bg-black/40 hover:border-green-600/40 hover:text-green-50",
-                )}
-                href={directory.route}
-                onClick={onNavigate}
-              >
-                <span className="text-xs font-semibold uppercase tracking-[0.4em]">
-                  {directory.label}
-                </span>
-                <span className="text-[0.65rem] uppercase tracking-[0.3em] text-green-300/70">
-                  {counts[directory.id] ?? 0}{" "}
-                  {(counts[directory.id] ?? 0) === 1 ? "Entry" : "Entries"}
-                </span>
-                <span className="text-[0.65rem] leading-relaxed text-green-200/70">
-                  {directory.description}
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="mt-6">
+      <div className="mb-6">
         <p className="text-[0.6rem] uppercase tracking-[0.5em] text-green-500/80">
           Profile & Comms
         </p>
@@ -82,7 +48,7 @@ export function Sidebar({
                     "block rounded border px-3 py-2 text-sm uppercase tracking-[0.35em] transition",
                     isActive
                       ? "border-green-400/50 bg-green-500/10 text-green-50"
-                      : "border-green-900/30 bg-black/40 hover:border-green-600/40 hover:text-green-50",
+                      : "border-green-900/30 bg-black/40 hover:border-green-600/40 hover:text-green-50"
                   )}
                   href={link.href}
                   onClick={onNavigate}
@@ -94,14 +60,41 @@ export function Sidebar({
           })}
         </ul>
       </div>
-      {currentDirectory ? (
-        <div className="mt-4 text-[0.6rem] uppercase tracking-[0.35em] text-green-500/70">
-          Active node:{" "}
-          {directoryMap[currentDirectory]
-            ? directoryMap[currentDirectory].label
-            : currentDirectory}
-        </div>
-      ) : null}
+      <div className="mt-6">
+        <p className="text-[0.6rem] uppercase tracking-[0.5em] text-green-500/80">
+          Directories
+        </p>
+        <ul className="mt-4 flex-1 space-y-2">
+          {directories.map((directory) => {
+            const isActive = currentDirectory === directory.id;
+            return (
+              <li key={directory.id}>
+                <Link
+                  className={clsx(
+                    "flex flex-col gap-1 rounded border px-3 py-2 transition",
+                    isActive
+                      ? "border-green-400/50 bg-green-500/10 text-green-100 shadow-inner shadow-green-400/30"
+                      : "border-green-900/30 bg-black/40 hover:border-green-600/40 hover:text-green-50"
+                  )}
+                  href={directory.route}
+                  onClick={onNavigate}
+                >
+                  <span className="text-xs font-semibold uppercase tracking-[0.4em]">
+                    {directory.label}
+                  </span>
+                  <span className="text-[0.65rem] uppercase tracking-[0.3em] text-green-300/70">
+                    {counts[directory.id] ?? 0}{" "}
+                    {(counts[directory.id] ?? 0) === 1 ? "Entry" : "Entries"}
+                  </span>
+                  <span className="text-[0.65rem] leading-relaxed text-green-200/70">
+                    {directory.description}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </aside>
   );
 }

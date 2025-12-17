@@ -12,13 +12,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "",
     "/dash",
     "/search",
-    "/about",
     "/contact",
-    "/credentials",
     "/files/case",
     "/files/intel",
     "/files/logs",
-    "/files/credentials",
   ].map((path) => ({
     url: `${siteUrl}${path}`,
     priority: path ? 0.8 : 1,
@@ -35,4 +32,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [...staticRoutes, ...dynamicRoutes];
 }
-
