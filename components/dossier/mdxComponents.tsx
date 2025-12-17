@@ -1,6 +1,10 @@
 import clsx from "clsx";
 import type { ComponentProps } from "react";
 
+type CodeProps = ComponentProps<"code"> & {
+  "data-language"?: string;
+};
+
 export const mdxComponents = {
   h2: (props: ComponentProps<"h2">) => (
     <h2 className="mt-8 text-2xl font-semibold text-green-50" {...props} />
@@ -55,8 +59,10 @@ export const mdxComponents = {
   td: (props: ComponentProps<"td">) => (
     <td className="px-4 py-3 align-top text-green-100/90" {...props} />
   ),
-  code: (props: ComponentProps<"code">) => {
-    const isBlock = Boolean(props["data-language"]);
+  code: (props: CodeProps) => {
+    const { className, ...rest } = props;
+    const language = props["data-language"];
+    const isBlock = Boolean(language);
     return (
       <code
         className={clsx(
@@ -64,9 +70,9 @@ export const mdxComponents = {
           isBlock
             ? "text-[0.95rem] text-green-50"
             : "rounded bg-green-900/40 px-2 py-1 text-sm text-green-100",
-          props.className,
+          className,
         )}
-        {...props}
+        {...rest}
       />
     );
   },
