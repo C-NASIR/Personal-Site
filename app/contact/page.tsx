@@ -20,9 +20,8 @@ export default async function ContactPage() {
   const searchDocuments = buildSearchIndex(allRecords);
 
   const contactLinks = [
-    { label: "LinkedIn", href: "https://linkedin.com/in/xandernova" },
-    { label: "GitHub", href: "https://github.com/xandernova" },
-    { label: "Calendly", href: "https://calendly.com/xandernova/intro" },
+    { label: "LinkedIn", href: "https://www.linkedin.com/in/cnasir2/" },
+    { label: "GitHub", href: "https://github.com/C-NASIR" },
   ];
 
   return (
