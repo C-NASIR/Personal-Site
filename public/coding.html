@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shadowing an AI-Native Engineer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d0d0d;
+    --paper: #f5f0e8;
+    --cream: #ede8dc;
+    --amber: #c8873a;
+    --amber-light: #f0c87a;
+    --amber-dim: #7a4f1a;
+    --green: #2a5c3f;
+    --green-light: #4a9e6f;
+    --red: #8c2a2a;
+    --blue: #1a3a5c;
+    --blue-light: #4a7eb5;
+    --muted: #6b6358;
+    --border: #d4cfc4;
+    --code-bg: #1a1a14;
+    --code-text: #e8e0cc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .masthead {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3rem 2rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .masthead::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(200,135,58,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .masthead-inner {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .masthead-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .masthead h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+
+  .masthead h1 span { color: var(--amber); }
+
+  .masthead-sub {
+    color: #a09888;
+    font-size: 1rem;
+    max-width: 600px;
+    font-weight: 300;
+  }
+
+  /* SCENARIO CARD */
+  .scenario-bar {
+    background: var(--amber);
+    color: var(--ink);
+    padding: 1.2rem 2rem;
+  }
+
+  .scenario-bar-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .scenario-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .scenario-text {
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+
+  /* LAYOUT */
+  .layout {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem 4rem;
+  }
+
+  /* PHASE HEADERS */
+  .phase-header {
+    margin: 3rem 0 0;
+    padding: 1.5rem 0 1rem;
+    border-top: 2px solid var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .phase-number {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .phase-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  /* STEP */
+  .step {
+    margin: 1.5rem 0;
+    border-left: 3px solid var(--border);
+    padding-left: 1.5rem;
+    transition: border-color 0.2s;
+  }
+
+  .step:hover { border-left-color: var(--amber); }
+
+  .step-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .step-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .step-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .tag-think { background: #e8e0f0; color: #4a2a7a; }
+  .tag-do { background: #e0f0e8; color: var(--green); }
+  .tag-check { background: #f0e8e0; color: var(--amber-dim); }
+  .tag-decision { background: #f0e0e0; color: var(--red); }
+  .tag-parallel { background: #e0ecf8; color: var(--blue); }
+  .tag-file { background: #f5f5e8; color: #5a5a2a; }
+
+  .step-title {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-body {
+    font-size: 0.92rem;
+    color: #3a3530;
+    line-height: 1.75;
+  }
+
+  .step-body p { margin-bottom: 0.6rem; }
+  .step-body p:last-child { margin-bottom: 0; }
+
+  /* THINKING BUBBLE */
+  .think-bubble {
+    background: #f8f4ee;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1rem 1.2rem;
+    margin: 0.75rem 0;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: var(--muted);
+    position: relative;
+  }
+
+  .think-bubble::before {
+    content: '"';
+    font-family: 'Playfair Display', serif;
+    font-size: 3rem;
+    color: var(--border);
+    position: absolute;
+    top: -0.5rem;
+    left: 0.75rem;
+    line-height: 1;
+  }
+
+  .think-bubble p { padding-left: 1.5rem; }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border-radius: 4px;
+    padding: 1.2rem 1.4rem;
+    margin: 0.75rem 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    position: relative;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .code-block .filename {
+    font-size: 0.65rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+    display: block;
+    text-transform: uppercase;
+    white-space: normal;
+  }
+
+  .code-block .comment { color: #6b6b5a; font-style: italic; }
+  .code-block .key { color: var(--amber-light); }
+  .code-block .val { color: #9ed89e; }
+  .code-block .str { color: #e8b888; }
+  .code-block .heading { color: #7ab8f0; font-weight: 600; }
+
+  /* PARALLEL BLOCK */
+  .parallel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 0.75rem 0;
+  }
+
+  @media (max-width: 600px) {
+    .parallel-grid { grid-template-columns: 1fr; }
+  }
+
+  .parallel-col {
+    background: #eef4fb;
+    border: 1px solid #b8d0e8;
+    border-radius: 4px;
+    padding: 1rem;
+  }
+
+  .parallel-col-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--blue);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  .parallel-col ul {
+    list-style: none;
+    font-size: 0.85rem;
+    color: #2a3a4a;
+  }
+
+  .parallel-col ul li {
+    padding: 0.2rem 0;
+    padding-left: 1rem;
+    position: relative;
+  }
+
+  .parallel-col ul li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--blue-light);
+    font-size: 0.75rem;
+  }
+
+  /* DECISION BOX */
+  .decision-box {
+    background: #fdf5f0;
+    border: 1px solid #e8c8b0;
+    border-left: 4px solid var(--amber);
+    border-radius: 4px;
+    padding: 1rem 1.2rem;
+    margin: 0.75rem 0;
+    font-size: 0.88rem;
+  }
+
+  .decision-box .decision-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--amber-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+  }
+
+  /* CHECKLIST */
+  .checklist {
+    list-style: none;
+    margin: 0.75rem 0;
+  }
+
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    font-size: 0.88rem;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    padding-left: 0.25rem;
+    border-radius: 2px;
+  }
+
+  .checklist li:hover { background: rgba(200,135,58,0.05); }
+  .checklist li:last-child { border-bottom: none; }
+
+  .checklist li.done { text-decoration: line-through; color: var(--muted); }
+
+  .check-box {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .checklist li.done .check-box {
+    background: var(--green-light);
+    border-color: var(--green-light);
+    color: white;
+    font-size: 10px;
+  }
+
+  /* WARNING / NOTE */
+  .callout {
+    border-radius: 4px;
+    padding: 0.9rem 1.1rem;
+    margin: 0.75rem 0;
+    font-size: 0.88rem;
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .callout-warn { background: #fdf5e8; border: 1px solid #e8d0a0; }
+  .callout-note { background: #eef4fb; border: 1px solid #b8d4f0; }
+  .callout-good { background: #eef8f0; border: 1px solid #a8d8b8; }
+
+  .callout-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+  .callout-text { line-height: 1.6; }
+
+  /* DIVIDER */
+  .section-end {
+    text-align: center;
+    padding: 2rem 0 0;
+    color: var(--border);
+    font-size: 1.2rem;
+    letter-spacing: 0.5em;
+  }
+
+  /* SUMMARY */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .summary-card {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1.2rem;
+    border-radius: 4px;
+  }
+
+  .summary-card .s-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--amber);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .summary-card .s-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+
+  .summary-card .s-desc {
+    font-size: 0.78rem;
+    color: #a09888;
+  }
+
+  /* PROGRESS BAR */
+  .progress-bar-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--ink);
+    height: 3px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--amber);
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  /* NAV DOTS */
+  .nav-dots {
+    position: fixed;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 50;
+  }
+
+  .nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    padding: 0;
+  }
+
+  .nav-dot.active { background: var(--amber); transform: scale(1.4); }
+  .nav-dot:hover { background: var(--amber); }
+
+  @media (max-width: 768px) {
+    .nav-dots { display: none; }
+    .layout { padding: 0 1rem 3rem; }
+    .masthead { padding: 2rem 1rem 1.5rem; }
+    .scenario-bar { padding: 1rem; }
+  }
+
+  strong { font-weight: 500; }
+  em { color: var(--amber-dim); font-style: normal; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar-wrap">
+  <div class="progress-bar-fill" id="progressBar"></div>
+</div>
+
+<nav class="nav-dots" id="navDots"></nav>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="masthead-label">— Field Notes —</div>
+    <h1>Shadow me <br> <span> AI-Native </span> Engineer</h1>
+    <p class="masthead-sub">A scenario, walked step by step. Every decision, every command, every mental model — narrated as it happens.</p>
+  </div>
+</header>
+
+<div class="scenario-bar">
+  <div class="scenario-bar-inner">
+    <span class="scenario-label">The Scenario</span>
+    <span class="scenario-text">Build a task management system: users can create projects, add tasks with deadlines, assign them, and get email notifications when tasks are overdue.</span>
+  </div>
+</div>
+
+<main class="layout" id="mainContent">
+
+  <!-- ==================== PHASE 0 ==================== -->
+  <div class="phase-header" data-phase="0">
+    <span class="phase-number">Phase 00</span>
+    <h2 class="phase-title">Before I Touch a Tool</h2>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">01</span>
+      <span class="step-tag tag-think">Think</span>
+    </div>
+    <div class="step-title">Understand the full scope before decomposing anything</div>
+    <div class="step-body">
+      <div class="think-bubble"><p>Don't touch the keyboard yet. What are the real boundaries of this system? What does "done" actually look like? What are the failure modes nobody mentioned?</p></div>
+      <p>I spend 10–15 minutes thinking through the system end-to-end. Not planning how to code it — understanding what it actually is.</p>
+      <p>Key questions I answer for myself: What does a user do first? Where does email sending live — is it async or synchronous? What happens if an email fails? What does "overdue" mean — midnight of the deadline day? Whose timezone?</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">02</span>
+      <span class="step-tag tag-decision">Decision</span>
+    </div>
+    <div class="step-title">Pick the tech stack — and lock it in writing</div>
+    <div class="step-body">
+      <p>I decide: Next.js 15 (App Router), Postgres + Drizzle ORM, Resend for email, BullMQ for the notification queue, Vercel for hosting. I write this down immediately.</p>
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠</span>
+        <span class="callout-text"><strong>Why write it down?</strong> If I don't, each agent session will make its own assumptions. One agent uses Prisma, another uses Drizzle. Now I have a conflict I didn't cause.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">03</span>
+      <span class="step-tag tag-file">File</span>
+    </div>
+    <div class="step-title">Create AGENTS.md — the constitution of the project</div>
+    <div class="step-body">
+      <p>This is the first file I create. Before any spec, before any code. Every agent session will read this.</p>
+      <div class="code-block">
+        <span class="filename">AGENTS.md</span>
+        <span class="heading"># Task Management System — Agent Constitution</span>
+
+<span class="comment">## Every session: read memory.md first. Append discoveries to memory.md.</span>
+
+<span class="heading">## Stack (non-negotiable)</span>
+<span class="val">- Framework: Next.js 15, App Router, TypeScript strict mode
+- Database: PostgreSQL via Drizzle ORM (never raw SQL strings)
+- Email: Resend SDK only (never nodemailer)
+- Queue: BullMQ + Redis for async jobs
+- Auth: NextAuth.js v5
+- Styling: Tailwind CSS only, no inline styles</span>
+
+<span class="heading">## Rules</span>
+<span class="val">- Never install new packages without asking me first
+- All DB access through Drizzle schema — never bypass with raw queries
+- Every API route must validate input with Zod
+- All errors must be caught and returned as typed responses — never throw unhandled
+- After every implementation, run: tsc --noEmit && npm run lint
+- If either fails, fix before marking done</span>
+
+<span class="heading">## Timezone rule</span>
+<span class="val">- "Overdue" = task.deadline &lt; now() in UTC. Store all times in UTC.</span>
+
+<span class="heading">## What NOT to do</span>
+<span class="val">- Do not create new UI components if shadcn has one that fits
+- Do not add console.log to production code
+- Do not use 'any' type in TypeScript</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 1 ==================== -->
+  <div class="phase-header" data-phase="1">
+    <span class="phase-number">Phase 01</span>
+    <h2 class="phase-title">Decompose the System</h2>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">04</span>
+      <span class="step-tag tag-think">Think</span>
+    </div>
+    <div class="step-title">Map the system into independent workstreams</div>
+    <div class="step-body">
+      <div class="think-bubble"><p>What are the natural seams in this system? Where can two agents work without stepping on each other? The answer is always: separate concerns with a defined interface between them.</p></div>
+      <p>I sketch the system as a diagram in my head, then on paper. I find four natural workstreams:</p>
+
+      <div class="parallel-grid">
+        <div class="parallel-col">
+          <div class="parallel-col-label">🟡 Track A — Core Data Layer</div>
+          <ul>
+            <li>DB schema (projects, tasks, users, assignments)</li>
+            <li>Drizzle migrations</li>
+            <li>CRUD API routes</li>
+            <li>Input validation (Zod schemas)</li>
+          </ul>
+        </div>
+        <div class="parallel-col">
+          <div class="parallel-col-label">🔵 Track B — Auth + Permissions</div>
+          <ul>
+            <li>NextAuth.js setup</li>
+            <li>User model + session shape</li>
+            <li>Permission guards (can this user edit this task?)</li>
+            <li>Protected routes middleware</li>
+          </ul>
+        </div>
+        <div class="parallel-col">
+          <div class="parallel-col-label">🟢 Track C — Notification Engine</div>
+          <ul>
+            <li>BullMQ queue setup</li>
+            <li>Overdue job scheduler (cron)</li>
+            <li>Email templates (Resend)</li>
+            <li>Retry + failure handling</li>
+          </ul>
+        </div>
+        <div class="parallel-col">
+          <div class="parallel-col-label">🟣 Track D — UI</div>
+          <ul>
+            <li>Project list + create flow</li>
+            <li>Task board (kanban)</li>
+            <li>Assignment UI</li>
+            <li>Deadline picker</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠</span>
+        <span class="callout-text"><strong>Track D depends on A and B.</strong> The UI needs API routes and auth to exist. So the actual parallel execution is A + B + C simultaneously, then D starts when A and B have stable interfaces — not necessarily finished, just stable enough for D to know what to call.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">05</span>
+      <span class="step-tag tag-file">File</span>
+    </div>
+    <div class="step-title">Define the interfaces between tracks — before any agent starts</div>
+    <div class="step-body">
+      <p>This is the most important step most engineers skip. The interface contract is what lets two agents work in parallel without producing code that conflicts at merge time.</p>
+      <div class="code-block">
+        <span class="filename">specs/interfaces.md</span>
+        <span class="heading"># Interface Contracts</span>
+
+<span class="comment">## Task object shape (agreed by Track A + D)</span>
+<span class="key">type Task = {
+  id: string           </span><span class="comment">// uuid</span>
+<span class="key">  projectId: string
+  title: string
+  description: string | null
+  deadline: Date       </span><span class="comment">// always UTC</span>
+<span class="key">  assigneeId: string | null
+  status: 'todo' | 'in_progress' | 'done'
+  createdAt: Date
+  updatedAt: Date
+}</span>
+
+<span class="comment">## API routes Track D can assume exist (built by Track A)</span>
+<span class="val">GET  /api/projects              → Project[]
+POST /api/projects              → Project
+GET  /api/projects/:id/tasks    → Task[]
+POST /api/projects/:id/tasks    → Task
+PATCH /api/tasks/:id            → Task
+DELETE /api/tasks/:id           → void</span>
+
+<span class="comment">## Session shape Track D can assume (built by Track B)</span>
+<span class="key">session.user = { id: string, email: string, name: string }</span>
+      </div>
+      <p>Now Track D can build the UI calling these routes even before Track A finishes, because both sides have agreed on the contract.</p>
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 2 ==================== -->
+  <div class="phase-header" data-phase="2">
+    <span class="phase-number">Phase 02</span>
+    <h2 class="phase-title">Write the Specs</h2>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">06</span>
+      <span class="step-tag tag-do">Do</span>
+      <span class="step-tag tag-think">Think</span>
+    </div>
+    <div class="step-title">Write specs/A.md — with an agent as my thinking partner</div>
+    <div class="step-body">
+      <div class="think-bubble"><p>I am the architect. I'm not asking the agent what to build — I'm asking it to stress-test what I've already decided. What did I miss? What edge cases will break this?</p></div>
+      <p>I open a session with Claude Code. I don't say "plan this for me." I say:</p>
+      <div class="code-block">
+        <span class="comment">// My prompt to the agent</span>
+        <span class="str">"I'm building the data layer for a task management system.
+Here's my plan: [paste my outline]
+Here's the DB schema I'm thinking: [paste schema sketch]
+
+I want you to:
+1. Identify any edge cases I haven't handled
+2. Flag any schema decisions that will cause pain later
+3. Ask me questions about anything ambiguous
+
+Do NOT suggest a different approach. Work within what I've described."</span>
+      </div>
+      <p>The agent surfaces three things I missed: cascading deletes when a project is deleted, the index I need for the overdue query, and that BullMQ needs the task ID not the full task object in the queue. I update my plan with those.</p>
+      <div class="code-block">
+        <span class="filename">specs/track-A.md</span>
+        <span class="heading"># Track A: Core Data Layer</span>
+
+<span class="heading">## Goal</span>
+<span class="val">Build the database schema and REST API for projects and tasks.</span>
+
+<span class="heading">## Success criteria</span>
+<span class="val">- All CRUD operations work and return typed responses
+- Input validation rejects malformed requests with 400 + error message
+- TypeScript compiles with zero errors
+- Tests pass for happy path + 3 error cases per route</span>
+
+<span class="heading">## Schema</span>
+<span class="key">projects: id, name, ownerId, createdAt
+tasks: id, projectId, title, description, deadline(UTC),
+       assigneeId, status, createdAt, updatedAt
+       INDEX on (deadline, status) for overdue query</span>
+
+<span class="heading">## Cascade rules</span>
+<span class="val">- Delete project → cascade delete all tasks
+- Delete user → set assigneeId = null (do not delete tasks)</span>
+
+<span class="heading">## Files in scope</span>
+<span class="val">src/db/schema.ts
+src/db/migrations/
+src/app/api/projects/route.ts
+src/app/api/projects/[id]/tasks/route.ts
+src/app/api/tasks/[id]/route.ts
+src/lib/validations/task.ts</span>
+
+<span class="heading">## Do NOT touch</span>
+<span class="val">- Auth files (Track B owns these)
+- Email/queue files (Track C owns these)
+- Any UI components</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">07</span>
+      <span class="step-tag tag-parallel">Parallel</span>
+    </div>
+    <div class="step-title">Write specs for B and C — simultaneously</div>
+    <div class="step-body">
+      <p>I don't wait for Track A's spec to be perfect before writing B and C. I open two more sessions and do the same process — I architect, agent stress-tests, I update.</p>
+      <p>Track B spec covers: NextAuth config, the user table additions, session callbacks, and the middleware that protects <code>/app/*</code> routes.</p>
+      <p>Track C spec covers: BullMQ queue setup, the cron job that runs every hour querying tasks where <code>deadline &lt; now() AND status != 'done' AND notified = false</code>, the Resend email call, and the retry policy (3 attempts, exponential backoff).</p>
+      <div class="callout callout-good">
+        <span class="callout-icon">✓</span>
+        <span class="callout-text">Writing three specs in parallel is itself a productivity gain. Each agent session is independent. While one session is thinking, I'm giving input to another.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 3 ==================== -->
+  <div class="phase-header" data-phase="3">
+    <span class="phase-number">Phase 03</span>
+    <h2 class="phase-title">Implementation — Parallel Execution</h2>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">08</span>
+      <span class="step-tag tag-do">Do</span>
+      <span class="step-tag tag-parallel">Parallel</span>
+    </div>
+    <div class="step-title">Spin up three agents simultaneously on isolated git worktrees</div>
+    <div class="step-body">
+      <p>Three terminal windows. Three branches. No file conflicts possible because each track owns distinct files as defined in the spec.</p>
+      <div class="code-block">
+        <span class="comment"># Terminal 1 — Track A</span>
+        <span class="val">git worktree add ../task-mgmt-track-a feat/data-layer
+cd ../task-mgmt-track-a
+claude "Read AGENTS.md and specs/track-A.md then implement"</span>
+
+        <span class="comment"># Terminal 2 — Track B</span>
+        <span class="val">git worktree add ../task-mgmt-track-b feat/auth
+cd ../task-mgmt-track-b
+claude "Read AGENTS.md and specs/track-B.md then implement"</span>
+
+        <span class="comment"># Terminal 3 — Track C</span>
+        <span class="val">git worktree add ../task-mgmt-track-c feat/notifications
+cd ../task-mgmt-track-c
+claude "Read AGENTS.md and specs/track-C.md then implement"</span>
+      </div>
+      <div class="think-bubble"><p>Now I step back. My job for the next 30–40 minutes is not to code. It's to monitor, unblock, and think about what comes next. I am a director, not an actor.</p></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">09</span>
+      <span class="step-tag tag-check">Check</span>
+    </div>
+    <div class="step-title">Monitor agents — intervene only when blocked</div>
+    <div class="step-body">
+      <p>I cycle between the three terminals every few minutes. I'm looking for one thing: is the agent making a decision that violates the spec or the interfaces contract?</p>
+      <div class="decision-box">
+        <div class="decision-label">Decision point example</div>
+        Track B agent asks: "Should I store the user's timezone in the user table?" My answer: "Yes, add a timezone column defaulting to UTC. Update interfaces.md to include it in the session shape."
+      </div>
+      <p>I update interfaces.md and paste the relevant section into Track A's terminal so it knows about the new column too. This is the coordination work only a human can do across isolated agent contexts.</p>
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠</span>
+        <span class="callout-text"><strong>What I do NOT do:</strong> I don't let the agent decide architectural questions silently. If it's blocked on a decision and just picks something, that decision becomes load-bearing and I won't know it happened. Better to get asked too many questions than too few.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">10</span>
+      <span class="step-tag tag-check">Check</span>
+    </div>
+    <div class="step-title">Each agent self-verifies before I look at anything</div>
+    <div class="step-body">
+      <p>Because AGENTS.md contains the rule "run <code>tsc --noEmit && npm run lint</code> after implementation," each agent does this automatically. I don't review code that has type errors — that's a waste of my attention.</p>
+      <p>Track A finishes first. It reports: TypeScript passes, lint passes, 12 tests written and passing. Now I do my review.</p>
+      <div class="checklist" id="reviewChecklist">
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>Does the schema match what's in interfaces.md?</li>
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>Are the cascade deletes implemented correctly?</li>
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>Is Zod validation present on every route?</li>
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>Are error responses typed, not thrown?</li>
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>Did it touch any files outside its scope?</li>
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>Does the overdue index exist in the migration?</li>
+      </ul>
+      <p style="margin-top:0.75rem; font-size:0.85rem; color: var(--muted)">I'm not reading every line. I'm checking the decisions that matter architecturally. Line-by-line review is the AI's job (CodeRabbit / Graphite Agent).</p>
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 4 ==================== -->
+  <div class="phase-header" data-phase="4">
+    <span class="phase-number">Phase 04</span>
+    <h2 class="phase-title">Merge, Then UI</h2>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">11</span>
+      <span class="step-tag tag-do">Do</span>
+    </div>
+    <div class="step-title">Merge in dependency order, not completion order</div>
+    <div class="step-body">
+      <p>Even if Track C finishes before Track B, I merge in order: A → B → C. Track B's auth middleware depends on Track A's user table. Track C's queue depends on Track A's task IDs. Order matters.</p>
+      <div class="code-block">
+        <span class="comment"># Merge order</span>
+        <span class="val">git merge feat/data-layer   </span><span class="comment"># Track A — no deps</span>
+        <span class="val">git merge feat/auth         </span><span class="comment"># Track B — needs user table from A</span>
+        <span class="val">git merge feat/notifications </span><span class="comment"># Track C — needs task IDs from A</span>
+      </div>
+      <p>If there's a merge conflict, I resolve it. Conflicts here usually mean an agent touched a file it wasn't supposed to — that's a spec violation I address immediately and add a rule to AGENTS.md so it never happens again.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">12</span>
+      <span class="step-tag tag-do">Do</span>
+    </div>
+    <div class="step-title">Now start Track D — UI — with full context available</div>
+    <div class="step-body">
+      <p>Track D was waiting for stable A and B interfaces. They're merged now. I write specs/track-D.md, which references the actual API routes and session shape now confirmed in the codebase.</p>
+      <div class="think-bubble"><p>The UI agent now has the real API to call, real types to import, real session shape to use. It's not building against an assumption. This is why I waited. A UI built on assumed interfaces will need to be rebuilt when reality differs.</p></div>
+      <p>I also add one specific instruction to the Track D prompt:</p>
+      <div class="code-block">
+        <span class="str">"After implementing each UI component:
+1. Use Playwright to open the page in a browser
+2. Screenshot and verify it renders correctly
+3. Check the browser console for JS errors
+4. Test the primary interaction (create a task, assign it)
+Do NOT mark any component done until browser verification passes."</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 5 ==================== -->
+  <div class="phase-header" data-phase="5">
+    <span class="phase-number">Phase 05</span>
+    <h2 class="phase-title">Cross-Cutting Concerns</h2>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">13</span>
+      <span class="step-tag tag-do">Do</span>
+    </div>
+    <div class="step-title">Run the security subagent across all auth and API code</div>
+    <div class="step-body">
+      <p>This is a specialized agent I defined in <code>.claude/agents/security-reviewer.md</code>. It has one job: find vulnerabilities. It uses Read + Grep tools only — it never writes code, just reports.</p>
+      <div class="code-block">
+        <span class="comment">// What the security subagent checks</span>
+        <span class="val">- SQL injection via Drizzle (parameterized queries enforced?)
+- IDOR: can user A access user B's tasks via /api/tasks/:id?
+- Auth bypass: are all /api/* routes protected?
+- Rate limiting: is there anything on auth endpoints?
+- Secrets in code: any hardcoded API keys?
+- CORS: is it locked to known origins in production?</span>
+      </div>
+      <p>It finds one issue: the <code>PATCH /api/tasks/:id</code> route validates the input but doesn't verify the requesting user owns the project containing that task. Classic IDOR vulnerability. I file this as a fix task and the main agent patches it.</p>
+      <div class="callout callout-good">
+        <span class="callout-icon">✓</span>
+        <span class="callout-text">This is the value of specialization. A general agent implementing features won't audit for IDOR — it's thinking about making things work, not about how they can be abused. Different mindsets need different agents.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">14</span>
+      <span class="step-tag tag-file">File</span>
+    </div>
+    <div class="step-title">Update memory.md with what was learned</div>
+    <div class="step-body">
+      <p>This happens automatically per AGENTS.md rules. But I also manually add the key architectural decisions made during this session.</p>
+      <div class="code-block">
+        <span class="filename">memory.md</span>
+        <span class="heading">## 2026-03-02</span>
+        <span class="val">- BullMQ requires task ID in queue, not full object — fetch fresh in worker
+- Cascade: delete project → delete tasks. Delete user → nullify assigneeId
+- IDOR found on PATCH /api/tasks/:id — fixed, must check project ownership
+- Overdue query needs composite index on (deadline, status) — added to migration
+- Timezone: all deadlines UTC, user.timezone for display only</span>
+      </div>
+      <p>Next session — tomorrow, next feature, next engineer onboarding — starts with this context loaded. Zero rediscovery cost.</p>
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 6 ==================== -->
+  <div class="phase-header" data-phase="6">
+    <span class="phase-number">Phase 06</span>
+    <h2 class="phase-title">Review, Ship, Reflect</h2>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">15</span>
+      <span class="step-tag tag-check">Check</span>
+    </div>
+    <div class="step-title">Human review — architecture and business logic only</div>
+    <div class="step-body">
+      <p>I read through the codebase now with fresh eyes. I'm not looking for syntax errors or style issues — the agents and CI handled that. I'm asking one question per file: <em>does this make the right decision for the business?</em></p>
+      <p>Specifically: Does the overdue logic match what a user would actually expect? Does the permission model handle edge cases (what if a project has no owner because the owner deleted their account)?</p>
+      <p>I find one business logic gap: when a project is deleted, assigned users should get an email notification their tasks are gone. Not in the spec. I add it as a follow-up task, not a blocker.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">16</span>
+      <span class="step-tag tag-do">Do</span>
+    </div>
+    <div class="step-title">Open small, stacked PRs — not one giant PR</div>
+    <div class="step-body">
+      <div class="think-bubble"><p>A 2,000 line PR is a rubber-stamp PR. Nobody actually reviews it. Four 200-line PRs get real review.</p></div>
+      <p>I open four PRs in order:</p>
+      <div class="checklist">
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>PR 1: DB schema + migrations (Track A foundation)</li>
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>PR 2: API routes + validation (Track A routes)</li>
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>PR 3: Auth setup (Track B)</li>
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>PR 4: Notification queue + email (Track C)</li>
+        <li onclick="toggleCheck(this)"><span class="check-box"></span>PR 5: UI components (Track D)</li>
+      </div>
+      <p>Each PR is small enough to review in 10 minutes. CI runs on each. They're stacked — each one merges into the next, not into main directly.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-meta">
+      <span class="step-num">17</span>
+      <span class="step-tag tag-think">Reflect</span>
+    </div>
+    <div class="step-title">Update AGENTS.md with what to do differently next time</div>
+    <div class="step-body">
+      <p>The IDOR vulnerability tells me my security spec was too vague. I add a new rule to AGENTS.md:</p>
+      <div class="code-block">
+        <span class="comment">## New rule added after this session</span>
+        <span class="val">For every PATCH and DELETE route: verify the requesting user
+has permission on the parent resource, not just the resource itself.
+Example: to edit a task, verify user owns the project, not just the task.</span>
+      </div>
+      <p>This rule now exists permanently. The next feature, the next agent, the next session — this mistake can never happen again. <em>This is the compounding effect.</em> Every correction makes the system permanently smarter.</p>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="phase-header" data-phase="7">
+    <span class="phase-number">Summary</span>
+    <h2 class="phase-title">What Just Happened</h2>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="s-label">Lines I wrote</div>
+      <div class="s-val">~50</div>
+      <div class="s-desc">AGENTS.md, specs, interfaces contract, memory.md updates</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-label">Lines agents wrote</div>
+      <div class="s-val">~2,400</div>
+      <div class="s-desc">Schema, migrations, API routes, auth, queue, UI, tests</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-label">Parallel tracks</div>
+      <div class="s-val">4</div>
+      <div class="s-desc">A, B, C ran simultaneously. D followed with stable interfaces.</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-label">Bugs caught before review</div>
+      <div class="s-val">1 IDOR</div>
+      <div class="s-desc">Security subagent found it. Would have shipped without it.</div>
+    </div>
+  </div>
+
+  <div class="step" style="margin-top:1.5rem;">
+    <div class="step-body">
+      <p><strong>The mental model shift:</strong> A traditional engineer writes code. An AI-native engineer <em>designs systems that write code</em>. The AGENTS.md, the specs, the interfaces contract, the memory.md — that's the real work. The code is the output of the system you built, not the thing you built.</p>
+      <p style="margin-top:0.75rem">Every decision you wrote down, every rule you added to AGENTS.md, every entry in memory.md — those compound. In three months, you have an AI development environment that knows your codebase, your standards, your past mistakes, and your architectural preferences. Nobody else has that. It's yours.</p>
+    </div>
+  </div>
+
+  <div class="section-end">· · ·</div>
+
+</main>
+
+<script>
+  function toggleCheck(li) {
+    li.classList.toggle('done');
+    const box = li.querySelector('.check-box');
+    if (li.classList.contains('done')) {
+      box.textContent = '✓';
+    } else {
+      box.textContent = '';
+    }
+  }
+
+  // Progress bar
+  window.addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollHeight = doc.scrollHeight - doc.clientHeight;
+    const progress = (scrollTop / scrollHeight) * 100;
+    document.getElementById('progressBar').style.width = progress + '%';
+  });
+
+  // Nav dots
+  const phases = document.querySelectorAll('[data-phase]');
+  const navDots = document.getElementById('navDots');
+
+  phases.forEach((phase, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'nav-dot';
+    dot.title = phase.querySelector('h2')?.textContent || '';
+    dot.addEventListener('click', () => {
+      phase.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    navDots.appendChild(dot);
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const idx = Array.from(phases).indexOf(entry.target);
+        document.querySelectorAll('.nav-dot').forEach((d, i) => {
+          d.classList.toggle('active', i === idx);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+
+  phases.forEach(p => observer.observe(p));
+
+  // Fix code block indentation using TreeWalker on text nodes only (avoids mangling HTML tags)
+  document.querySelectorAll('.code-block').forEach(block => {
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    let node;
+    while ((node = walker.nextNode())) textNodes.push(node);
+
+    let minIndent = Infinity;
+    textNodes.forEach(tn => {
+      tn.nodeValue.split('\n').forEach(line => {
+        const trimmed = line.trimStart();
+        if (trimmed.length > 0) minIndent = Math.min(minIndent, line.length - trimmed.length);
+      });
+    });
+    if (minIndent === Infinity || minIndent === 0) return;
+
+    textNodes.forEach(tn => {
+      tn.nodeValue = tn.nodeValue.split('\n')
+        .map(line => line.length >= minIndent ? line.slice(minIndent) : line.trimStart())
+        .join('\n');
+    });
+
+    const first = textNodes[0];
+    if (first) first.nodeValue = first.nodeValue.replace(/^\n+/, '');
+    const last = textNodes[textNodes.length - 1];
+    if (last) last.nodeValue = last.nodeValue.replace(/\n+$/, '');
+  });
+</script>
+</body>
+</html>
